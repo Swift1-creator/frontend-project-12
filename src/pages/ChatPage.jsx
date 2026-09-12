@@ -35,6 +35,7 @@ import {
 import { getToken } from '../auth.js';
 import { cleanText } from '../profanity.js';
 import { useChatStore } from '../store.js';
+import { Sentry } from '../sentry.js';
 
 const ChatPage = () => {
   const { t } = useTranslation();
@@ -94,6 +95,15 @@ const ChatPage = () => {
 
   const channels = channelsQuery.data || [];
   const messages = messagesQuery.data || [];
+
+  const captureChatError = (error, operation) => {
+    Sentry.captureException(error, {
+      tags: {
+        area: 'chat',
+        operation,
+      },
+    });
+  };
 
   const showErrorNotification = (message) => {
     notifications.show({
@@ -157,10 +167,25 @@ const ChatPage = () => {
   });
 
   useEffect(() => {
-    if (
-      channelsQuery.isError
-      || messagesQuery.isError
-    ) {
+    if (channelsQuery.error) {
+      captureChatError(
+        channelsQuery.error,
+        'load-channels',
+      );
+
+      notifications.show({
+        title: t('chat.notifications.loadError'),
+        message: t('chat.loadError'),
+        color: 'red',
+      });
+    }
+
+    if (messagesQuery.error) {
+      captureChatError(
+        messagesQuery.error,
+        'load-messages',
+      );
+
       notifications.show({
         title: t('chat.notifications.loadError'),
         message: t('chat.loadError'),
@@ -168,8 +193,8 @@ const ChatPage = () => {
       });
     }
   }, [
-    channelsQuery.isError,
-    messagesQuery.isError,
+    channelsQuery.error,
+    messagesQuery.error,
     t,
   ]);
 
@@ -241,6 +266,8 @@ const ChatPage = () => {
       }
 
       setIsSocketConnected(false);
+
+      captureChatError(error, 'socket-connect');
 
       notifications.show({
         title: t('chat.notifications.offline'),
@@ -323,7 +350,8 @@ const ChatPage = () => {
       );
     },
 
-    onError: () => {
+    onError: (error) => {
+      captureChatError(error, 'create-channel');
       showErrorNotification(t('chat.createError'));
     },
   });
@@ -345,7 +373,8 @@ const ChatPage = () => {
       );
     },
 
-    onError: () => {
+    onError: (error) => {
+      captureChatError(error, 'rename-channel');
       showErrorNotification(t('chat.renameError'));
     },
   });
@@ -370,7 +399,8 @@ const ChatPage = () => {
       );
     },
 
-    onError: () => {
+    onError: (error) => {
+      captureChatError(error, 'delete-channel');
       showErrorNotification(t('chat.deleteError'));
     },
   });
@@ -386,7 +416,8 @@ const ChatPage = () => {
       });
     },
 
-    onError: () => {
+    onError: (error) => {
+      captureChatError(error, 'send-message');
       showErrorNotification(t('chat.sendError'));
     },
   });
@@ -504,7 +535,9 @@ const ChatPage = () => {
             variant="light"
             onClick={openCreateModal}
           >
-            + {t('chat.addChannel')}
+            +
+            {' '}
+            {t('chat.addChannel')}
           </Button>
         </Group>
 
@@ -536,7 +569,9 @@ const ChatPage = () => {
                   }}
                 >
                   <Text truncate>
-                    # {cleanText(channel.name)}
+                    #
+                    {' '}
+                    {cleanText(channel.name)}
                   </Text>
                 </Button>
 
