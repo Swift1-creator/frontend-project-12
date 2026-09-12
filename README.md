@@ -1,3 +1,6 @@
+
+[![Hexlet Check](https://github.com/Swift1-creator/frontend-project-12/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/Swift1-creator/frontend-project-12/actions/workflows/hexlet-check.yml)
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
