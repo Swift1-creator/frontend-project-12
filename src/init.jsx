@@ -14,6 +14,7 @@ import {
 import ChatPage from './pages/ChatPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
+import SignupPage from './components/SignupPage.jsx';
 
 import './sentry.js';
 import './i18n.js';
@@ -34,12 +35,22 @@ const init = async () => {
           <Routes>
             <Route
               path="/"
-              element={<ChatPage />}
+              element={<LoginPage />}
             />
 
             <Route
               path="/login"
               element={<LoginPage />}
+            />
+
+            <Route
+              path="/signup"
+              element={<SignupPage />}
+            />
+
+            <Route
+              path="/chat"
+              element={<ChatPage />}
             />
 
             <Route

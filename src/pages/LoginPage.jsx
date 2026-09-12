@@ -44,8 +44,6 @@ const LoginPage = () => {
     mutationFn: loginUser,
 
     onSuccess: (data) => {
-      console.log('Ответ сервера при входе:', data);
-
       const receivedToken = (
         data.token
         || data.accessToken
@@ -53,13 +51,12 @@ const LoginPage = () => {
       );
 
       if (!receivedToken) {
-        console.error('Токен отсутствует в ответе сервера:', data);
         return;
       }
 
       saveToken(receivedToken);
 
-      navigate('/', {
+      navigate('/chat', {
         replace: true,
       });
     },
@@ -67,7 +64,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (token) {
-      navigate('/', {
+      navigate('/chat', {
         replace: true,
       });
     }
@@ -102,7 +99,7 @@ const LoginPage = () => {
       >
         <Stack>
           <TextInput
-            label="Имя пользователя"
+            label="Ваш ник"
             placeholder="Введите имя пользователя"
             {...form.getInputProps('username')}
           />
@@ -131,7 +128,7 @@ const LoginPage = () => {
             to="/signup"
             variant="subtle"
           >
-            Создать аккаунт
+            Регистрация
           </Button>
         </Stack>
       </Box>
