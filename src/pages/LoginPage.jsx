@@ -117,6 +117,7 @@ const LoginPage = () => {
             autoComplete="current-password"
             required
             {...form.getInputProps('password')}
+            aria-label="Пароль"
           />
 
           {loginMutation.isError && (

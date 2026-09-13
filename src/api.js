@@ -14,6 +14,31 @@ const getHeaders = () => {
   return headers;
 };
 
+const parseError = async (
+  response,
+  defaultMessage = 'Ошибка запроса',
+) => {
+  let errorMessage = defaultMessage;
+
+  try {
+    const data = await response.json();
+
+    errorMessage = (
+      data.message
+      || data.error
+      || errorMessage
+    );
+  } catch {
+    // Ответ может быть пустым или не содержать JSON.
+  }
+
+  if (response.status === 401) {
+    errorMessage = 'Сессия истекла. Войдите снова.';
+  }
+
+  return errorMessage;
+};
+
 const request = async (url, options = {}) => {
   const response = await fetch(url, {
     ...options,
@@ -24,23 +49,7 @@ const request = async (url, options = {}) => {
   });
 
   if (!response.ok) {
-    let errorMessage = 'Ошибка запроса';
-
-    try {
-      const data = await response.json();
-
-      errorMessage = (
-        data.message
-        || data.error
-        || errorMessage
-      );
-    } catch {
-      // Ответ может быть пустым
-    }
-
-    if (response.status === 401) {
-      errorMessage = 'Сессия истекла. Войдите снова.';
-    }
+    const errorMessage = await parseError(response);
 
     throw new Error(errorMessage);
   }
@@ -68,21 +77,43 @@ export const loginUser = async ({
   });
 
   if (!response.ok) {
-    let errorMessage = 'Не удалось войти';
-
-    try {
-      const data = await response.json();
-
-      errorMessage = (
-        data.message
-        || data.error
-        || errorMessage
-      );
-    } catch {
-      // Ответ может быть пустым
-    }
+    const errorMessage = await parseError(
+      response,
+      'Не удалось войти',
+    );
 
     throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+export const registerUser = async ({
+  username,
+  password,
+}) => {
+  const response = await fetch('/api/v1/signup', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      username,
+      password,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorMessage = await parseError(
+      response,
+      'Не удалось зарегистрироваться',
+    );
+
+    throw new Error(errorMessage);
+  }
+
+  if (response.status === 204) {
+    return null;
   }
 
   return response.json();
