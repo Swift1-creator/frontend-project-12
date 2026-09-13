@@ -11,11 +11,13 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
 import { loginUser } from '../api.js';
 import { getToken, saveToken } from '../auth.js';
 
 const LoginPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const token = getToken();
 
@@ -29,13 +31,13 @@ const LoginPage = () => {
       username: (value) => (
         value.trim().length > 0
           ? null
-          : 'Введите имя пользователя'
+          : t('auth.required')
       ),
 
       password: (value) => (
         value.length > 0
           ? null
-          : 'Введите пароль'
+          : t('auth.required')
       ),
     },
   });
@@ -90,7 +92,7 @@ const LoginPage = () => {
       }}
     >
       <Title order={1} mb="xl">
-        Вход
+        {t('auth.loginTitle')}
       </Title>
 
       <Box
@@ -102,8 +104,8 @@ const LoginPage = () => {
           <TextInput
             id="username"
             name="username"
-            label="Ваш ник"
-            placeholder="Введите имя пользователя"
+            label={t('auth.username')}
+            placeholder={t('auth.username')}
             autoComplete="username"
             required
             {...form.getInputProps('username')}
@@ -112,12 +114,12 @@ const LoginPage = () => {
           <PasswordInput
             id="password"
             name="password"
-            label="Пароль"
-            placeholder="Введите пароль"
+            label={t('auth.password')}
+            placeholder={t('auth.password')}
             autoComplete="current-password"
             required
             {...form.getInputProps('password')}
-            aria-label="Пароль"
+            aria-label={t('auth.password')}
           />
 
           {loginMutation.isError && (
@@ -125,7 +127,7 @@ const LoginPage = () => {
               color="red"
               role="alert"
             >
-              Не удалось войти. Проверьте имя пользователя и пароль.
+              {t('auth.loginError')}
             </Alert>
           )}
 
@@ -133,7 +135,7 @@ const LoginPage = () => {
             type="submit"
             loading={loginMutation.isPending}
           >
-            Войти
+            {t('auth.login')}
           </Button>
 
           <Button
@@ -141,7 +143,7 @@ const LoginPage = () => {
             to="/signup"
             variant="subtle"
           >
-            Регистрация
+            {t('auth.toSignup')}
           </Button>
         </Stack>
       </Box>

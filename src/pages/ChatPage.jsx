@@ -168,6 +168,7 @@ const ChatPage = () => {
     initialValues: {
       name: '',
     },
+
     validate: {
       name: (value) => validateChannelName(value),
     },
@@ -177,6 +178,7 @@ const ChatPage = () => {
     initialValues: {
       name: '',
     },
+
     validate: {
       name: (value) => (
         validateChannelName(value, editingChannel?.id)
@@ -239,9 +241,7 @@ const ChatPage = () => {
 
     const socket = io('http://localhost:5001', {
       transports: ['websocket', 'polling'],
-      auth: {
-        token,
-      },
+      auth: { token },
     });
 
     socketRef.current = socket;
@@ -286,7 +286,6 @@ const ChatPage = () => {
 
     const handleMessage = (data) => {
       const received = data?.data ?? data;
-
       const message = (
         received?.message
         || received?.data
@@ -576,7 +575,7 @@ const ChatPage = () => {
                         color="gray"
                         size="compact-sm"
                         px={8}
-                        aria-label={channel.name}
+                        aria-label={t('chat.manageChannel')}
                       >
                         ⋮
                       </Button>
@@ -668,8 +667,8 @@ const ChatPage = () => {
             <Textarea
               id="message-input"
               name="body"
-              label="Новое сообщение"
-              aria-label="Новое сообщение"
+              label={t('chat.newMessage')}
+              aria-label={t('chat.newMessage')}
               placeholder={t('chat.messagePlaceholder')}
               style={{ flex: 1 }}
               autosize
@@ -743,7 +742,7 @@ const ChatPage = () => {
           onSubmit={handleEditSubmit}
         >
           <TextInput
-            label={t('chat.newChannelName')}
+            label={t('chat.channelName')}
             data-autofocus
             {...editForm.getInputProps('name')}
           />
@@ -751,7 +750,10 @@ const ChatPage = () => {
           <Group justify="flex-end" mt="md">
             <Button
               variant="default"
-              onClick={closeEditModal}
+              onClick={() => {
+                closeEditModal();
+                setEditingChannel(null);
+              }}
               disabled={updateChannelMutation.isPending}
             >
               {t('chat.cancel')}
@@ -785,7 +787,10 @@ const ChatPage = () => {
         <Group justify="flex-end" mt="md">
           <Button
             variant="default"
-            onClick={closeDeleteModal}
+            onClick={() => {
+              closeDeleteModal();
+              setChannelToDelete(null);
+            }}
             disabled={deleteChannelMutation.isPending}
           >
             {t('chat.cancel')}

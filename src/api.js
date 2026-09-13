@@ -33,7 +33,7 @@ const parseError = async (
   }
 
   if (response.status === 401) {
-    errorMessage = 'Сессия истекла. Войдите снова.';
+    return 'Сессия истекла. Войдите снова.';
   }
 
   return errorMessage;
@@ -49,9 +49,7 @@ const request = async (url, options = {}) => {
   });
 
   if (!response.ok) {
-    const errorMessage = await parseError(response);
-
-    throw new Error(errorMessage);
+    throw new Error(await parseError(response));
   }
 
   if (response.status === 204) {
@@ -61,55 +59,23 @@ const request = async (url, options = {}) => {
   return response.json();
 };
 
-export const loginUser = async ({
-  username,
-  password,
-}) => {
-  const response = await fetch('/api/v1/login', {
+const authRequest = async (
+  url,
+  body,
+  defaultMessage,
+) => {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      username,
-      password,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const errorMessage = await parseError(
-      response,
-      'Не удалось войти',
+    throw new Error(
+      await parseError(response, defaultMessage),
     );
-
-    throw new Error(errorMessage);
-  }
-
-  return response.json();
-};
-
-export const registerUser = async ({
-  username,
-  password,
-}) => {
-  const response = await fetch('/api/v1/signup', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      username,
-      password,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorMessage = await parseError(
-      response,
-      'Не удалось зарегистрироваться',
-    );
-
-    throw new Error(errorMessage);
   }
 
   if (response.status === 204) {
@@ -118,6 +84,28 @@ export const registerUser = async ({
 
   return response.json();
 };
+
+export const loginUser = ({
+  username,
+  password,
+}) => (
+  authRequest(
+    '/api/v1/login',
+    { username, password },
+    'Не удалось войти',
+  )
+);
+
+export const registerUser = ({
+  username,
+  password,
+}) => (
+  authRequest(
+    '/api/v1/signup',
+    { username, password },
+    'Не удалось зарегистрироваться',
+  )
+);
 
 export const fetchChannels = () => (
   request('/api/v1/channels')
@@ -143,9 +131,7 @@ export const sendMessage = ({
 export const createChannel = ({ name }) => (
   request('/api/v1/channels', {
     method: 'POST',
-    body: JSON.stringify({
-      name,
-    }),
+    body: JSON.stringify({ name }),
   })
 );
 
@@ -155,15 +141,12 @@ export const updateChannel = ({
 }) => (
   request(`/api/v1/channels/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({
-      name,
-    }),
+    body: JSON.stringify({ name }),
   })
 );
 
 export const deleteChannel = (id) => (
   request(`/api/v1/channels/${id}`, {
     method: 'DELETE',
-    body: JSON.stringify({}),
   })
 );

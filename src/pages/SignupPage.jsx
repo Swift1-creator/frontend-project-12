@@ -10,10 +10,13 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
 import { registerUser } from '../api.js';
+import { saveToken } from '../auth.js';
 
 const SignupPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const form = useForm({
@@ -24,25 +27,29 @@ const SignupPage = () => {
     },
 
     validate: {
-      username: (value) => (
-        value.trim().length > 0
-          ? null
-          : 'Введите имя пользователя'
-      ),
+      username: (value) => {
+        const length = value.trim().length;
+
+        if (length < 3 || length > 20) {
+          return t('auth.usernameLength');
+        }
+
+        return null;
+      },
 
       password: (value) => (
-        value.length > 0
+        value.length >= 6
           ? null
-          : 'Введите пароль'
+          : t('auth.passwordLength')
       ),
 
       passwordConfirmation: (value, values) => {
         if (value.length === 0) {
-          return 'Подтвердите пароль';
+          return t('auth.required');
         }
 
         if (value !== values.password) {
-          return 'Пароли не совпадают';
+          return t('auth.passwordMismatch');
         }
 
         return null;
@@ -53,7 +60,23 @@ const SignupPage = () => {
   const signupMutation = useMutation({
     mutationFn: registerUser,
 
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const receivedToken = (
+        data?.token
+        || data?.accessToken
+        || data?.access_token
+      );
+
+      if (receivedToken) {
+        saveToken(receivedToken);
+
+        navigate('/', {
+          replace: true,
+        });
+
+        return;
+      }
+
       navigate('/login', {
         replace: true,
       });
@@ -67,6 +90,8 @@ const SignupPage = () => {
     });
   });
 
+  const errorMessage = signupMutation.error?.message;
+
   return (
     <Box
       style={{
@@ -76,7 +101,7 @@ const SignupPage = () => {
       }}
     >
       <Title order={1} mb="xl">
-        Регистрация
+        {t('auth.signupTitle')}
       </Title>
 
       <Box
@@ -98,12 +123,12 @@ const SignupPage = () => {
           <PasswordInput
             id="password"
             name="password"
-            label="Пароль"
-            placeholder="Введите пароль"
+            label={t('auth.password')}
+            placeholder={t('auth.password')}
             autoComplete="new-password"
             required
             {...form.getInputProps('password')}
-            aria-label="Пароль"
+            aria-label={t('auth.password')}
           />
 
           <PasswordInput
@@ -122,7 +147,9 @@ const SignupPage = () => {
               color="red"
               role="alert"
             >
-              Не удалось зарегистрироваться.
+              {errorMessage === 'Такой пользователь уже существует'
+                ? t('auth.duplicateUser')
+                : t('auth.signupError')}
             </Alert>
           )}
 
@@ -130,7 +157,7 @@ const SignupPage = () => {
             type="submit"
             loading={signupMutation.isPending}
           >
-            Зарегистрироваться
+            {t('auth.signup')}
           </Button>
 
           <Button
@@ -138,7 +165,7 @@ const SignupPage = () => {
             to="/login"
             variant="subtle"
           >
-            Войти
+            {t('auth.toLogin')}
           </Button>
         </Stack>
       </Box>
