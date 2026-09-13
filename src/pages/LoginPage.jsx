@@ -45,9 +45,9 @@ const LoginPage = () => {
 
     onSuccess: (data) => {
       const receivedToken = (
-        data.token
-        || data.accessToken
-        || data.access_token
+        data?.token
+        || data?.accessToken
+        || data?.access_token
       );
 
       if (!receivedToken) {
@@ -96,22 +96,34 @@ const LoginPage = () => {
       <Box
         component="form"
         onSubmit={handleSubmit}
+        noValidate
       >
         <Stack>
           <TextInput
+            id="username"
+            name="username"
             label="Ваш ник"
             placeholder="Введите имя пользователя"
+            autoComplete="username"
+            required
             {...form.getInputProps('username')}
           />
 
           <PasswordInput
+            id="password"
+            name="password"
             label="Пароль"
             placeholder="Введите пароль"
+            autoComplete="current-password"
+            required
             {...form.getInputProps('password')}
           />
 
           {loginMutation.isError && (
-            <Alert color="red">
+            <Alert
+              color="red"
+              role="alert"
+            >
               Не удалось войти. Проверьте имя пользователя и пароль.
             </Alert>
           )}

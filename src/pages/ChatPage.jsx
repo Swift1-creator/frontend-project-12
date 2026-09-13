@@ -15,6 +15,7 @@ import {
   ScrollArea,
   Stack,
   Text,
+  Textarea,
   TextInput,
   Title,
 } from '@mantine/core';
@@ -39,7 +40,6 @@ import { Sentry } from '../sentry.js';
 
 const ChatPage = () => {
   const { t } = useTranslation();
-
   const token = getToken();
   const queryClient = useQueryClient();
   const socketRef = useRef(null);
@@ -133,8 +133,7 @@ const ChatPage = () => {
 
     const duplicate = channels.some((channel) => (
       String(channel.id) !== String(excludedChannelId)
-      && channel.name.trim().toLowerCase()
-        === name.toLowerCase()
+      && channel.name.trim().toLowerCase() === name.toLowerCase()
     ));
 
     if (duplicate) {
@@ -148,7 +147,6 @@ const ChatPage = () => {
     initialValues: {
       name: '',
     },
-
     validate: {
       name: (value) => validateChannelName(value),
     },
@@ -158,7 +156,6 @@ const ChatPage = () => {
     initialValues: {
       name: '',
     },
-
     validate: {
       name: (value) => (
         validateChannelName(value, editingChannel?.id)
@@ -234,14 +231,9 @@ const ChatPage = () => {
       }
 
       setIsSocketConnected(true);
-
-      console.log(
-        'Socket.IO подключён:',
-        socket.id,
-      );
     };
 
-    const handleDisconnect = (reason) => {
+    const handleDisconnect = () => {
       if (socket !== socketRef.current) {
         return;
       }
@@ -253,11 +245,6 @@ const ChatPage = () => {
         message: t('chat.notifications.offline'),
         color: 'red',
       });
-
-      console.log(
-        'Socket.IO отключён:',
-        reason,
-      );
     };
 
     const handleConnectError = (error) => {
@@ -266,7 +253,6 @@ const ChatPage = () => {
       }
 
       setIsSocketConnected(false);
-
       captureChatError(error, 'socket-connect');
 
       notifications.show({
@@ -275,11 +261,6 @@ const ChatPage = () => {
           || t('chat.notifications.offline'),
         color: 'red',
       });
-
-      console.error(
-        'Ошибка Socket.IO:',
-        error?.message,
-      );
     };
 
     const handleMessage = (data) => {
@@ -299,8 +280,7 @@ const ChatPage = () => {
         ['messages'],
         (currentMessages = []) => {
           const exists = currentMessages.some(
-            (item) => String(item.id)
-              === String(message.id),
+            (item) => String(item.id) === String(message.id),
           );
 
           if (exists) {
@@ -465,6 +445,13 @@ const ChatPage = () => {
     });
   };
 
+  const handleMessageKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
+
   const handleOpenEdit = (channel) => {
     setEditingChannel(channel);
 
@@ -591,7 +578,6 @@ const ChatPage = () => {
 
                     <Menu.Dropdown>
                       <Menu.Item
-                        leftSection="✎"
                         onClick={() => {
                           handleOpenEdit(channel);
                         }}
@@ -601,7 +587,6 @@ const ChatPage = () => {
 
                       <Menu.Item
                         color="red"
-                        leftSection="×"
                         onClick={() => {
                           handleOpenDelete(channel);
                         }}
@@ -674,13 +659,21 @@ const ChatPage = () => {
           mt="md"
         >
           <Group align="flex-end" wrap="nowrap">
-            <TextInput
+            <Textarea
+              id="message-input"
+              name="body"
+              label="Новое сообщение"
+              aria-label="Новое сообщение"
+              placeholder={t('chat.messagePlaceholder')}
               style={{ flex: 1 }}
+              autosize
+              minRows={1}
+              maxRows={4}
               value={messageText}
               onChange={(event) => {
                 setMessageText(event.currentTarget.value);
               }}
-              placeholder={t('chat.messagePlaceholder')}
+              onKeyDown={handleMessageKeyDown}
               disabled={sendMessageMutation.isPending}
             />
 
@@ -779,7 +772,7 @@ const ChatPage = () => {
       >
         <Text>
           {t('chat.deleteConfirmation', {
-            name: cleanText(channelToDelete?.name),
+            name: cleanText(channelToDelete?.name || ''),
           })}
         </Text>
 
