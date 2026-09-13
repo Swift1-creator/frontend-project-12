@@ -2,151 +2,70 @@ import { getToken } from './auth.js';
 
 const getHeaders = () => {
   const token = getToken();
-
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 };
 
-const parseError = async (
-  response,
-  defaultMessage = 'Ошибка запроса',
-) => {
+const parseError = async (response, defaultMessage = 'Ошибка запроса') => {
   let errorMessage = defaultMessage;
-
   try {
     const data = await response.json();
-
-    errorMessage = (
-      data.message
-      || data.error
-      || errorMessage
-    );
+    errorMessage = data.message || data.error || errorMessage;
   } catch {
     // Ответ может быть пустым или не содержать JSON.
   }
-
-  if (response.status === 401) {
-    return 'Сессия истекла. Войдите снова.';
-  }
-
+  if (response.status === 401) return 'Сессия истекла. Войдите снова.';
   return errorMessage;
 };
 
 const request = async (url, options = {}) => {
   const response = await fetch(url, {
     ...options,
-    headers: {
-      ...getHeaders(),
-      ...options.headers,
-    },
+    headers: { ...getHeaders(), ...options.headers },
   });
-
-  if (!response.ok) {
-    throw new Error(await parseError(response));
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
+  if (!response.ok) throw new Error(await parseError(response));
+  if (response.status === 204) return null;
   return response.json();
 };
 
-const authRequest = async (
-  url,
-  body,
-  defaultMessage,
-) => {
+const authRequest = async (url, body, defaultMessage) => {
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-
-  if (!response.ok) {
-    throw new Error(
-      await parseError(response, defaultMessage),
-    );
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
+  if (!response.ok) throw new Error(await parseError(response, defaultMessage));
+  if (response.status === 204) return null;
   return response.json();
 };
 
-export const loginUser = ({
-  username,
-  password,
-}) => (
-  authRequest(
-    '/api/v1/login',
-    { username, password },
-    'Не удалось войти',
-  )
+export const loginUser = ({ username, password }) => authRequest(
+  '/api/v1/login', { username, password }, 'Не удалось войти',
 );
 
-export const registerUser = ({
-  username,
-  password,
-}) => (
-  authRequest(
-    '/api/v1/signup',
-    { username, password },
-    'Не удалось зарегистрироваться',
-  )
+export const registerUser = ({ username, password }) => authRequest(
+  '/api/v1/signup', { username, password }, 'Не удалось зарегистрироваться',
 );
 
-export const fetchChannels = () => (
-  request('/api/v1/channels')
-);
+export const fetchChannels = () => request('/api/v1/channels');
+export const fetchMessages = () => request('/api/v1/messages');
 
-export const fetchMessages = () => (
-  request('/api/v1/messages')
-);
+export const sendMessage = ({ body, channelId }) => request('/api/v1/messages', {
+  method: 'POST',
+  body: JSON.stringify({ body, channelId }),
+});
 
-export const sendMessage = ({
-  body,
-  channelId,
-}) => (
-  request('/api/v1/messages', {
-    method: 'POST',
-    body: JSON.stringify({
-      body,
-      channelId,
-    }),
-  })
-);
+export const createChannel = ({ name }) => request('/api/v1/channels', {
+  method: 'POST',
+  body: JSON.stringify({ name }),
+});
 
-export const createChannel = ({ name }) => (
-  request('/api/v1/channels', {
-    method: 'POST',
-    body: JSON.stringify({ name }),
-  })
-);
+export const updateChannel = ({ id, name }) => request(`/api/v1/channels/${id}`, {
+  method: 'PATCH',
+  body: JSON.stringify({ name }),
+});
 
-export const updateChannel = ({
-  id,
-  name,
-}) => (
-  request(`/api/v1/channels/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ name }),
-  })
-);
-
-export const deleteChannel = (id) => (
-  request(`/api/v1/channels/${id}`, {
-    method: 'DELETE',
-  })
-);
+export const deleteChannel = (id) => request(`/api/v1/channels/${id}`, {
+  method: 'DELETE',
+});

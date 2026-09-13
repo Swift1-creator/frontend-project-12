@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -14,12 +13,11 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import { loginUser } from '../api.js';
-import { getToken, saveToken } from '../auth.js';
+import { saveToken } from '../auth.js';
 
 const LoginPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const token = getToken();
 
   const form = useForm({
     initialValues: {
@@ -52,11 +50,9 @@ const LoginPage = () => {
         || data?.access_token
       );
 
-      if (!receivedToken) {
-        return;
+      if (receivedToken) {
+        saveToken(receivedToken);
       }
-
-      saveToken(receivedToken);
 
       navigate('/', {
         replace: true,
@@ -64,24 +60,12 @@ const LoginPage = () => {
     },
   });
 
-  useEffect(() => {
-    if (token) {
-      navigate('/', {
-        replace: true,
-      });
-    }
-  }, [token, navigate]);
-
   const handleSubmit = form.onSubmit((values) => {
     loginMutation.mutate({
       username: values.username.trim(),
       password: values.password,
     });
   });
-
-  if (token) {
-    return null;
-  }
 
   return (
     <Box
