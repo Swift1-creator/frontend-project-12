@@ -56,7 +56,7 @@ const LoginPage = () => {
 
       saveToken(receivedToken);
 
-      navigate('/chat', {
+      navigate('/', {
         replace: true,
       });
     },
@@ -64,7 +64,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (token) {
-      navigate('/chat', {
+      navigate('/', {
         replace: true,
       });
     }
