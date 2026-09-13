@@ -2,8 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import ChatPage from './pages/ChatPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
-import SignupPage from './components/SignupPage.jsx';
-import Header from './components/Header.jsx';
+import SignupPage from './pages/SignupPage.jsx';
 import { getToken } from './auth.js';
 
 const ProtectedRoute = ({ children }) => {
@@ -18,7 +17,7 @@ const ProtectedRoute = ({ children }) => {
 
 const App = () => (
   <>
-    <Header />
+   
 
     <Routes>
       <Route

@@ -21,8 +21,16 @@ const resources = {
         toSignup: 'Регистрация',
         toLogin: 'Войти',
         required: 'Обязательное поле',
+
+        usernameLength:
+          'Имя пользователя должно содержать от 3 до 20 символов',
+        passwordLength:
+          'Пароль должен содержать не менее 6 символов',
+        passwordMismatch: 'Пароли не совпадают',
+
         loginError: 'Неверное имя пользователя или пароль',
         signupError: 'Не удалось зарегистрироваться',
+        duplicateUser: 'Пользователь уже существует',
       },
 
       chat: {
@@ -44,17 +52,29 @@ const resources = {
         connectionEstablished: 'Соединение установлено',
         noConnection: 'Нет соединения',
         defaultUser: 'Пользователь',
+
         deleteConfirmation:
           'Канал «{{name}}» и его сообщения будут удалены.',
+
         createError: 'Не удалось создать канал',
         renameError: 'Не удалось переименовать канал',
         deleteError: 'Не удалось удалить канал',
         sendError: 'Не удалось отправить сообщение',
         loadError: 'Не удалось загрузить данные чата',
+
         nameLength:
           'Название должно содержать от 3 до 20 символов',
         duplicateName:
           'Канал с таким именем уже существует',
+
+        notifications: {
+          operationError: 'Ошибка операции',
+          channelCreated: 'Канал создан',
+          channelRenamed: 'Канал переименован',
+          channelDeleted: 'Канал удалён',
+          loadError: 'Ошибка загрузки',
+          offline: 'Нет соединения',
+        },
       },
     },
   },

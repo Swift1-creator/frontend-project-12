@@ -15,6 +15,17 @@ import { useTranslation } from 'react-i18next';
 import { loginUser } from '../api.js';
 import { saveToken } from '../auth.js';
 
+const getTokenFromResponse = (response) => (
+  response?.token
+  || response?.accessToken
+  || response?.access_token
+  || response?.data?.token
+  || response?.data?.accessToken
+  || response?.data?.access_token
+  || response?.user?.token
+  || response?.data?.user?.token
+);
+
 const LoginPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -27,15 +38,10 @@ const LoginPage = () => {
 
     validate: {
       username: (value) => (
-        value.trim().length > 0
-          ? null
-          : t('auth.required')
+        value.trim().length > 0 ? null : t('auth.required')
       ),
-
       password: (value) => (
-        value.length > 0
-          ? null
-          : t('auth.required')
+        value.length > 0 ? null : t('auth.required')
       ),
     },
   });
@@ -43,20 +49,15 @@ const LoginPage = () => {
   const loginMutation = useMutation({
     mutationFn: loginUser,
 
-    onSuccess: (data) => {
-      const receivedToken = (
-        data?.token
-        || data?.accessToken
-        || data?.access_token
-      );
+    onSuccess: (response) => {
+      const token = getTokenFromResponse(response);
 
-      if (receivedToken) {
-        saveToken(receivedToken);
+      if (!token) {
+        return;
       }
 
-      navigate('/', {
-        replace: true,
-      });
+      saveToken(token);
+      navigate('/', { replace: true });
     },
   });
 
@@ -79,16 +80,13 @@ const LoginPage = () => {
         {t('auth.loginTitle')}
       </Title>
 
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        noValidate
-      >
+      <Box component="form" onSubmit={handleSubmit} noValidate>
         <Stack>
           <TextInput
             id="username"
             name="username"
             label={t('auth.username')}
+            aria-label={t('auth.username')}
             placeholder={t('auth.username')}
             autoComplete="username"
             required
@@ -99,18 +97,15 @@ const LoginPage = () => {
             id="password"
             name="password"
             label={t('auth.password')}
+            aria-label={t('auth.password')}
             placeholder={t('auth.password')}
             autoComplete="current-password"
             required
             {...form.getInputProps('password')}
-            aria-label={t('auth.password')}
           />
 
           {loginMutation.isError && (
-            <Alert
-              color="red"
-              role="alert"
-            >
+            <Alert color="red" role="alert">
               {t('auth.loginError')}
             </Alert>
           )}
