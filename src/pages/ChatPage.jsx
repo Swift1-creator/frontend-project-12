@@ -9,7 +9,6 @@ import {
   Box,
   Button,
   Group,
-  Loader,
   Menu,
   Modal,
   ScrollArea,
@@ -96,13 +95,35 @@ const ChatPage = () => {
   const channels = channelsQuery.data || [];
   const messages = messagesQuery.data || [];
 
+  useEffect(() => {
+    if (!channels.length) {
+      return;
+    }
+
+    const selectedChannelExists = channels.some(
+      (channel) => (
+        String(channel.id) === String(currentChannelId)
+      ),
+    );
+
+    if (!selectedChannelExists) {
+      setCurrentChannelId(channels[0].id);
+    }
+  }, [
+    channels,
+    currentChannelId,
+    setCurrentChannelId,
+  ]);
+
   const captureChatError = (error, operation) => {
-    Sentry.captureException(error, {
-      tags: {
-        area: 'chat',
-        operation,
-      },
-    });
+    if (Sentry?.captureException) {
+      Sentry.captureException(error, {
+        tags: {
+          area: 'chat',
+          operation,
+        },
+      });
+    }
   };
 
   const showErrorNotification = (message) => {
@@ -321,7 +342,10 @@ const ChatPage = () => {
         queryKey: ['channels'],
       });
 
-      setCurrentChannelId(newChannel.id);
+      if (newChannel?.id) {
+        setCurrentChannelId(newChannel.id);
+      }
+
       createForm.reset();
       closeCreateModal();
 
@@ -477,24 +501,6 @@ const ChatPage = () => {
 
   if (!token) {
     return <Navigate to="/login" replace />;
-  }
-
-  if (
-    channelsQuery.isLoading
-    || messagesQuery.isLoading
-  ) {
-    return (
-      <Box
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
-        <Loader />
-      </Box>
-    );
   }
 
   return (
