@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { Notifications } from '@mantine/notifications';
 
 import ChatPage from './pages/ChatPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -17,19 +18,11 @@ const ProtectedRoute = ({ children }) => {
 
 const App = () => (
   <>
-   
+    <Notifications />
 
     <Routes>
-      <Route
-        path="/login"
-        element={<LoginPage />}
-      />
-
-      <Route
-        path="/signup"
-        element={<SignupPage />}
-      />
-
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
       <Route
         path="/"
         element={(
@@ -38,11 +31,7 @@ const App = () => (
           </ProtectedRoute>
         )}
       />
-
-      <Route
-        path="*"
-        element={<Navigate to="/" replace />}
-      />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   </>
 );

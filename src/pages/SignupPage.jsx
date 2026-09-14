@@ -25,61 +25,40 @@ const SignupPage = () => {
       password: '',
       passwordConfirmation: '',
     },
-
     validate: {
       username: (value) => {
         const length = value.trim().length;
-
-        if (length < 3 || length > 20) {
-          return t('auth.usernameLength');
-        }
-
-        return null;
-      },
-
-      password: (value) => (
-        value.length >= 6
+        return length >= 3 && length <= 20
           ? null
-          : t('auth.passwordLength')
+          : 'От 3 до 20 символов';
+      },
+      password: (value) => (
+        value.length >= 6 ? null : 'Не менее 6 символов'
       ),
-
       passwordConfirmation: (value, values) => {
-        if (value.length === 0) {
-          return t('auth.required');
-        }
-
-        if (value !== values.password) {
-          return t('auth.passwordMismatch');
-        }
-
-        return null;
+        if (!value) return t('auth.required');
+        return value === values.password
+          ? null
+          : 'Пароли должны совпадать';
       },
     },
   });
 
   const signupMutation = useMutation({
     mutationFn: registerUser,
-
     onSuccess: (data) => {
-      const receivedToken = (
+      const token = (
         data?.token
         || data?.accessToken
         || data?.access_token
       );
 
-      if (receivedToken) {
-        saveToken(receivedToken);
-
-        navigate('/', {
-          replace: true,
-        });
-
-        return;
+      if (token) {
+        saveToken(token);
+        navigate('/', { replace: true });
+      } else {
+        navigate('/login', { replace: true });
       }
-
-      navigate('/login', {
-        replace: true,
-      });
     },
   });
 
@@ -90,31 +69,15 @@ const SignupPage = () => {
     });
   });
 
-  const errorMessage = signupMutation.error?.message;
-
   return (
-    <Box
-      style={{
-        maxWidth: 420,
-        margin: '0 auto',
-        padding: 24,
-      }}
-    >
-      <Title order={1} mb="xl">
-        {t('auth.signupTitle')}
-      </Title>
+    <Box style={{ maxWidth: 420, margin: '0 auto', padding: 24 }}>
+      <Title order={1} mb="xl">{t('auth.signupTitle')}</Title>
 
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        noValidate
-      >
+      <Box component="form" onSubmit={handleSubmit}>
         <Stack>
           <TextInput
             id="username"
-            name="username"
             label="Имя пользователя"
-            placeholder="Введите имя пользователя"
             autoComplete="username"
             required
             {...form.getInputProps('username')}
@@ -122,49 +85,32 @@ const SignupPage = () => {
 
           <PasswordInput
             id="password"
-            name="password"
             label={t('auth.password')}
-            placeholder={t('auth.password')}
             autoComplete="new-password"
             required
             {...form.getInputProps('password')}
-            aria-label={t('auth.password')}
           />
 
           <PasswordInput
             id="passwordConfirmation"
-            name="passwordConfirmation"
             label="Подтвердите пароль"
-            placeholder="Повторите пароль"
             autoComplete="new-password"
             required
             {...form.getInputProps('passwordConfirmation')}
-            aria-label="Подтвердите пароль"
           />
 
           {signupMutation.isError && (
-            <Alert
-              color="red"
-              role="alert"
-            >
-              {errorMessage === 'Такой пользователь уже существует'
-                ? t('auth.duplicateUser')
-                : t('auth.signupError')}
+            <Alert color="red" role="alert">
+              {signupMutation.error?.message
+                || 'Не удалось зарегистрироваться'}
             </Alert>
           )}
 
-          <Button
-            type="submit"
-            loading={signupMutation.isPending}
-          >
+          <Button type="submit" loading={signupMutation.isPending}>
             {t('auth.signup')}
           </Button>
 
-          <Button
-            component={Link}
-            to="/login"
-            variant="subtle"
-          >
+          <Button component={Link} to="/login" variant="subtle">
             {t('auth.toLogin')}
           </Button>
         </Stack>

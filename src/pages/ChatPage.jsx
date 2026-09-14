@@ -37,6 +37,14 @@ import { cleanText } from '../profanity.js';
 import { useChatStore } from '../store.js';
 import { Sentry } from '../sentry.js';
 
+const CHANNEL_EVENTS = [
+  'newChannel',
+  'channelCreated',
+  'channelUpdated',
+  'channelRemoved',
+  'channelDeleted',
+];
+
 const ChatPage = () => {
   const { t } = useTranslation();
   const token = getToken();
@@ -50,26 +58,17 @@ const ChatPage = () => {
 
   const [
     createModalOpened,
-    {
-      open: openCreateModal,
-      close: closeCreateModal,
-    },
+    { open: openCreateModal, close: closeCreateModal },
   ] = useDisclosure(false);
 
   const [
     editModalOpened,
-    {
-      open: openEditModal,
-      close: closeEditModal,
-    },
+    { open: openEditModal, close: closeEditModal },
   ] = useDisclosure(false);
 
   const [
     deleteModalOpened,
-    {
-      open: openDeleteModal,
-      close: closeDeleteModal,
-    },
+    { open: openDeleteModal, close: closeDeleteModal },
   ] = useDisclosure(false);
 
   const currentChannelId = useChatStore(
@@ -96,24 +95,16 @@ const ChatPage = () => {
   const messages = messagesQuery.data || [];
 
   useEffect(() => {
-    if (!channels.length) {
-      return;
-    }
+    if (!channels.length) return;
 
-    const selectedChannelExists = channels.some(
-      (channel) => (
-        String(channel.id) === String(currentChannelId)
-      ),
+    const exists = channels.some(
+      (channel) => String(channel.id) === String(currentChannelId),
     );
 
-    if (!selectedChannelExists) {
+    if (!exists) {
       setCurrentChannelId(channels[0].id);
     }
-  }, [
-    channels,
-    currentChannelId,
-    setCurrentChannelId,
-  ]);
+  }, [channels, currentChannelId, setCurrentChannelId]);
 
   const captureChatError = (error, operation) => {
     if (Sentry?.captureException) {
@@ -165,18 +156,14 @@ const ChatPage = () => {
   };
 
   const createForm = useForm({
-    initialValues: {
-      name: '',
-    },
+    initialValues: { name: '' },
     validate: {
       name: (value) => validateChannelName(value),
     },
   });
 
   const editForm = useForm({
-    initialValues: {
-      name: '',
-    },
+    initialValues: { name: '' },
     validate: {
       name: (value) => (
         validateChannelName(value, editingChannel?.id)
@@ -186,10 +173,7 @@ const ChatPage = () => {
 
   useEffect(() => {
     if (channelsQuery.error) {
-      captureChatError(
-        channelsQuery.error,
-        'load-channels',
-      );
+      captureChatError(channelsQuery.error, 'load-channels');
 
       notifications.show({
         title: t('chat.notifications.loadError'),
@@ -199,10 +183,7 @@ const ChatPage = () => {
     }
 
     if (messagesQuery.error) {
-      captureChatError(
-        messagesQuery.error,
-        'load-messages',
-      );
+      captureChatError(messagesQuery.error, 'load-messages');
 
       notifications.show({
         title: t('chat.notifications.loadError'),
@@ -233,31 +214,22 @@ const ChatPage = () => {
   }, [t]);
 
   useEffect(() => {
-    if (!token) {
-      return undefined;
-    }
+    if (!token) return undefined;
 
     const socket = io('http://localhost:5001', {
       transports: ['websocket', 'polling'],
-      auth: {
-        token,
-      },
+      auth: { token },
     });
 
     socketRef.current = socket;
 
     const handleConnect = () => {
-      if (socket !== socketRef.current) {
-        return;
-      }
-
+      if (socket !== socketRef.current) return;
       setIsSocketConnected(true);
     };
 
     const handleDisconnect = () => {
-      if (socket !== socketRef.current) {
-        return;
-      }
+      if (socket !== socketRef.current) return;
 
       setIsSocketConnected(false);
 
@@ -269,9 +241,7 @@ const ChatPage = () => {
     };
 
     const handleConnectError = (error) => {
-      if (socket !== socketRef.current) {
-        return;
-      }
+      if (socket !== socketRef.current) return;
 
       setIsSocketConnected(false);
       captureChatError(error, 'socket-connect');
@@ -286,16 +256,13 @@ const ChatPage = () => {
 
     const handleMessage = (data) => {
       const received = data?.data ?? data;
-
       const message = (
         received?.message
         || received?.data
         || received
       );
 
-      if (!message?.id || !message?.channelId) {
-        return;
-      }
+      if (!message?.id || !message?.channelId) return;
 
       queryClient.setQueryData(
         ['messages'],
@@ -304,13 +271,17 @@ const ChatPage = () => {
             (item) => String(item.id) === String(message.id),
           );
 
-          if (exists) {
-            return currentMessages;
-          }
+          if (exists) return currentMessages;
 
           return [...currentMessages, message];
         },
       );
+    };
+
+    const handleChannelChange = () => {
+      queryClient.invalidateQueries({
+        queryKey: ['channels'],
+      });
     };
 
     socket.on('connect', handleConnect);
@@ -319,12 +290,20 @@ const ChatPage = () => {
     socket.on('message', handleMessage);
     socket.on('newMessage', handleMessage);
 
+    CHANNEL_EVENTS.forEach((eventName) => {
+      socket.on(eventName, handleChannelChange);
+    });
+
     return () => {
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('connect_error', handleConnectError);
       socket.off('message', handleMessage);
       socket.off('newMessage', handleMessage);
+
+      CHANNEL_EVENTS.forEach((eventName) => {
+        socket.off(eventName, handleChannelChange);
+      });
 
       if (socketRef.current === socket) {
         socketRef.current = null;
@@ -440,9 +419,7 @@ const ChatPage = () => {
   });
 
   const handleEditSubmit = editForm.onSubmit((values) => {
-    if (!editingChannel) {
-      return;
-    }
+    if (!editingChannel) return;
 
     updateChannelMutation.mutate({
       id: editingChannel.id,
@@ -478,11 +455,7 @@ const ChatPage = () => {
 
   const handleOpenEdit = (channel) => {
     setEditingChannel(channel);
-
-    editForm.setValues({
-      name: channel.name,
-    });
-
+    editForm.setValues({ name: channel.name });
     openEditModal();
   };
 
@@ -492,11 +465,9 @@ const ChatPage = () => {
   };
 
   const handleDelete = () => {
-    if (!channelToDelete) {
-      return;
+    if (channelToDelete) {
+      deleteChannelMutation.mutate(channelToDelete.id);
     }
-
-    deleteChannelMutation.mutate(channelToDelete.id);
   };
 
   if (!token) {
@@ -504,12 +475,7 @@ const ChatPage = () => {
   }
 
   return (
-    <Box
-      style={{
-        display: 'flex',
-        minHeight: '100vh',
-      }}
-    >
+    <Box style={{ display: 'flex', minHeight: '100vh' }}>
       <Box
         p="md"
         style={{
@@ -519,13 +485,12 @@ const ChatPage = () => {
         }}
       >
         <Group justify="space-between" wrap="nowrap">
-          <Title order={2}>
-            {t('chat.channels')}
-          </Title>
+          <Title order={2}>{t('chat.channels')}</Title>
 
           <Button
             size="compact-sm"
             variant="light"
+            aria-label="+"
             onClick={openCreateModal}
           >
             +
@@ -618,9 +583,7 @@ const ChatPage = () => {
         }}
       >
         <Group justify="space-between">
-          <Title order={2}>
-            {t('chat.messages')}
-          </Title>
+          <Title order={2}>{t('chat.messages')}</Title>
 
           <Text
             size="sm"
@@ -643,17 +606,13 @@ const ChatPage = () => {
             {currentMessages.map((message) => (
               <Box
                 key={message.id}
-                style={{
-                  overflowWrap: 'anywhere',
-                }}
+                style={{ overflowWrap: 'anywhere' }}
               >
                 <Text fw={700}>
                   {message.username || t('chat.defaultUser')}
                 </Text>
 
-                <Text>
-                  {cleanText(message.body)}
-                </Text>
+                <Text>{cleanText(message.body)}</Text>
               </Box>
             ))}
           </Stack>
@@ -704,7 +663,8 @@ const ChatPage = () => {
           onSubmit={handleCreateSubmit}
         >
           <TextInput
-            label={t('chat.channelName')}
+            label="Имя канала"
+            aria-label="Имя канала"
             placeholder={t('chat.channelPlaceholder')}
             data-autofocus
             {...createForm.getInputProps('name')}
@@ -743,7 +703,8 @@ const ChatPage = () => {
           onSubmit={handleEditSubmit}
         >
           <TextInput
-            label={t('chat.newChannelName')}
+            label="Имя канала"
+            aria-label="Имя канала"
             data-autofocus
             {...editForm.getInputProps('name')}
           />

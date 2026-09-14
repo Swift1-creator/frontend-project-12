@@ -31,11 +31,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   const form = useForm({
-    initialValues: {
-      username: '',
-      password: '',
-    },
-
+    initialValues: { username: '', password: '' },
     validate: {
       username: (value) => (
         value.trim().length > 0 ? null : t('auth.required')
@@ -48,13 +44,10 @@ const LoginPage = () => {
 
   const loginMutation = useMutation({
     mutationFn: loginUser,
-
     onSuccess: (response) => {
       const token = getTokenFromResponse(response);
 
-      if (!token) {
-        return;
-      }
+      if (!token) return;
 
       saveToken(token);
       navigate('/', { replace: true });
@@ -69,25 +62,15 @@ const LoginPage = () => {
   });
 
   return (
-    <Box
-      style={{
-        maxWidth: 420,
-        margin: '0 auto',
-        padding: 24,
-      }}
-    >
-      <Title order={1} mb="xl">
-        {t('auth.loginTitle')}
-      </Title>
+    <Box style={{ maxWidth: 420, margin: '0 auto', padding: 24 }}>
+      <Title order={1} mb="xl">{t('auth.loginTitle')}</Title>
 
-      <Box component="form" onSubmit={handleSubmit} noValidate>
+      <Box component="form" onSubmit={handleSubmit}>
         <Stack>
           <TextInput
             id="username"
-            name="username"
             label={t('auth.username')}
             aria-label={t('auth.username')}
-            placeholder={t('auth.username')}
             autoComplete="username"
             required
             {...form.getInputProps('username')}
@@ -95,10 +78,8 @@ const LoginPage = () => {
 
           <PasswordInput
             id="password"
-            name="password"
             label={t('auth.password')}
             aria-label={t('auth.password')}
-            placeholder={t('auth.password')}
             autoComplete="current-password"
             required
             {...form.getInputProps('password')}
@@ -106,22 +87,15 @@ const LoginPage = () => {
 
           {loginMutation.isError && (
             <Alert color="red" role="alert">
-              {t('auth.loginError')}
+              Неверные имя пользователя или пароль
             </Alert>
           )}
 
-          <Button
-            type="submit"
-            loading={loginMutation.isPending}
-          >
+          <Button type="submit" loading={loginMutation.isPending}>
             {t('auth.login')}
           </Button>
 
-          <Button
-            component={Link}
-            to="/signup"
-            variant="subtle"
-          >
+          <Button component={Link} to="/signup" variant="subtle">
             {t('auth.toSignup')}
           </Button>
         </Stack>
