@@ -114,7 +114,7 @@ export const updateChannel = ({ id, name }) => request(
   },
 );
 
-export const deleteChannel = (id) => request(
-  `/api/v1/channels/${id}`,
-  { method: 'DELETE' },
-);
+export const deleteChannel = async (channelId) => {
+  const response = await api.delete(`/channels/${channelId}`);
+  return response.data;
+};

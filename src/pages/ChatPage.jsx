@@ -95,7 +95,9 @@ const ChatPage = () => {
   const messages = messagesQuery.data || [];
 
   useEffect(() => {
-    if (!channels.length) return;
+    if (!channels.length) {
+      return;
+    }
 
     const exists = channels.some(
       (channel) => String(channel.id) === String(currentChannelId),
@@ -156,14 +158,18 @@ const ChatPage = () => {
   };
 
   const createForm = useForm({
-    initialValues: { name: '' },
+    initialValues: {
+      name: '',
+    },
     validate: {
       name: (value) => validateChannelName(value),
     },
   });
 
   const editForm = useForm({
-    initialValues: { name: '' },
+    initialValues: {
+      name: '',
+    },
     validate: {
       name: (value) => (
         validateChannelName(value, editingChannel?.id)
@@ -173,7 +179,10 @@ const ChatPage = () => {
 
   useEffect(() => {
     if (channelsQuery.error) {
-      captureChatError(channelsQuery.error, 'load-channels');
+      captureChatError(
+        channelsQuery.error,
+        'load-channels',
+      );
 
       notifications.show({
         title: t('chat.notifications.loadError'),
@@ -183,7 +192,10 @@ const ChatPage = () => {
     }
 
     if (messagesQuery.error) {
-      captureChatError(messagesQuery.error, 'load-messages');
+      captureChatError(
+        messagesQuery.error,
+        'load-messages',
+      );
 
       notifications.show({
         title: t('chat.notifications.loadError'),
@@ -214,22 +226,31 @@ const ChatPage = () => {
   }, [t]);
 
   useEffect(() => {
-    if (!token) return undefined;
+    if (!token) {
+      return undefined;
+    }
 
     const socket = io('http://localhost:5001', {
       transports: ['websocket', 'polling'],
-      auth: { token },
+      auth: {
+        token,
+      },
     });
 
     socketRef.current = socket;
 
     const handleConnect = () => {
-      if (socket !== socketRef.current) return;
+      if (socket !== socketRef.current) {
+        return;
+      }
+
       setIsSocketConnected(true);
     };
 
     const handleDisconnect = () => {
-      if (socket !== socketRef.current) return;
+      if (socket !== socketRef.current) {
+        return;
+      }
 
       setIsSocketConnected(false);
 
@@ -241,7 +262,9 @@ const ChatPage = () => {
     };
 
     const handleConnectError = (error) => {
-      if (socket !== socketRef.current) return;
+      if (socket !== socketRef.current) {
+        return;
+      }
 
       setIsSocketConnected(false);
       captureChatError(error, 'socket-connect');
@@ -256,13 +279,16 @@ const ChatPage = () => {
 
     const handleMessage = (data) => {
       const received = data?.data ?? data;
+
       const message = (
         received?.message
         || received?.data
         || received
       );
 
-      if (!message?.id || !message?.channelId) return;
+      if (!message?.id || !message?.channelId) {
+        return;
+      }
 
       queryClient.setQueryData(
         ['messages'],
@@ -271,7 +297,9 @@ const ChatPage = () => {
             (item) => String(item.id) === String(message.id),
           );
 
-          if (exists) return currentMessages;
+          if (exists) {
+            return currentMessages;
+          }
 
           return [...currentMessages, message];
         },
@@ -317,6 +345,27 @@ const ChatPage = () => {
     mutationFn: createChannel,
 
     onSuccess: (newChannel) => {
+      queryClient.setQueryData(
+        ['channels'],
+        (currentChannels = []) => {
+          if (!newChannel?.id) {
+            return currentChannels;
+          }
+
+          const exists = currentChannels.some(
+            (channel) => (
+              String(channel.id) === String(newChannel.id)
+            ),
+          );
+
+          if (exists) {
+            return currentChannels;
+          }
+
+          return [...currentChannels, newChannel];
+        },
+      );
+
       queryClient.invalidateQueries({
         queryKey: ['channels'],
       });
@@ -342,7 +391,18 @@ const ChatPage = () => {
   const updateChannelMutation = useMutation({
     mutationFn: updateChannel,
 
-    onSuccess: () => {
+    onSuccess: (updatedChannel) => {
+      queryClient.setQueryData(
+        ['channels'],
+        (currentChannels = []) => (
+          currentChannels.map((channel) => (
+            String(channel.id) === String(updatedChannel?.id)
+              ? { ...channel, ...updatedChannel }
+              : channel
+          ))
+        ),
+      );
+
       queryClient.invalidateQueries({
         queryKey: ['channels'],
       });
@@ -365,7 +425,30 @@ const ChatPage = () => {
   const deleteChannelMutation = useMutation({
     mutationFn: deleteChannel,
 
-    onSuccess: () => {
+    onSuccess: (_, deletedChannelId) => {
+      queryClient.setQueryData(
+        ['channels'],
+        (currentChannels = []) => (
+          currentChannels.filter(
+            (channel) => (
+              String(channel.id) !== String(deletedChannelId)
+            ),
+          )
+        ),
+      );
+
+      queryClient.setQueryData(
+        ['messages'],
+        (currentMessages = []) => (
+          currentMessages.filter(
+            (message) => (
+              String(message.channelId)
+              !== String(deletedChannelId)
+            ),
+          )
+        ),
+      );
+
       queryClient.invalidateQueries({
         queryKey: ['channels'],
       });
@@ -419,7 +502,9 @@ const ChatPage = () => {
   });
 
   const handleEditSubmit = editForm.onSubmit((values) => {
-    if (!editingChannel) return;
+    if (!editingChannel) {
+      return;
+    }
 
     updateChannelMutation.mutate({
       id: editingChannel.id,
@@ -455,7 +540,11 @@ const ChatPage = () => {
 
   const handleOpenEdit = (channel) => {
     setEditingChannel(channel);
-    editForm.setValues({ name: channel.name });
+
+    editForm.setValues({
+      name: channel.name,
+    });
+
     openEditModal();
   };
 
@@ -465,9 +554,14 @@ const ChatPage = () => {
   };
 
   const handleDelete = () => {
-    if (channelToDelete) {
-      deleteChannelMutation.mutate(channelToDelete.id);
+    if (
+      !channelToDelete
+      || deleteChannelMutation.isPending
+    ) {
+      return;
     }
+
+    deleteChannelMutation.mutate(channelToDelete.id);
   };
 
   if (!token) {
@@ -475,7 +569,12 @@ const ChatPage = () => {
   }
 
   return (
-    <Box style={{ display: 'flex', minHeight: '100vh' }}>
+    <Box
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+      }}
+    >
       <Box
         p="md"
         style={{
@@ -485,7 +584,9 @@ const ChatPage = () => {
         }}
       >
         <Group justify="space-between" wrap="nowrap">
-          <Title order={2}>{t('chat.channels')}</Title>
+          <Title order={2}>
+            {t('chat.channels')}
+          </Title>
 
           <Button
             size="compact-sm"
@@ -529,7 +630,7 @@ const ChatPage = () => {
                   <Text truncate>
                     #
                     {' '}
-                    {cleanText(channel.name)}
+                    {channel.name}
                   </Text>
                 </Button>
 
@@ -541,7 +642,7 @@ const ChatPage = () => {
                         color="gray"
                         size="compact-sm"
                         px={8}
-                        aria-label={channel.name}
+                        aria-label="Управление каналом"
                       >
                         ⋮
                       </Button>
@@ -549,18 +650,14 @@ const ChatPage = () => {
 
                     <Menu.Dropdown>
                       <Menu.Item
-                        onClick={() => {
-                          handleOpenEdit(channel);
-                        }}
+                        onClick={() => handleOpenEdit(channel)}
                       >
                         {t('chat.rename')}
                       </Menu.Item>
 
                       <Menu.Item
                         color="red"
-                        onClick={() => {
-                          handleOpenDelete(channel);
-                        }}
+                        onClick={() => handleOpenDelete(channel)}
                       >
                         {t('chat.delete')}
                       </Menu.Item>
@@ -583,7 +680,9 @@ const ChatPage = () => {
         }}
       >
         <Group justify="space-between">
-          <Title order={2}>{t('chat.messages')}</Title>
+          <Title order={2}>
+            {t('chat.messages')}
+          </Title>
 
           <Text
             size="sm"
@@ -606,13 +705,17 @@ const ChatPage = () => {
             {currentMessages.map((message) => (
               <Box
                 key={message.id}
-                style={{ overflowWrap: 'anywhere' }}
+                style={{
+                  overflowWrap: 'anywhere',
+                }}
               >
                 <Text fw={700}>
                   {message.username || t('chat.defaultUser')}
                 </Text>
 
-                <Text>{cleanText(message.body)}</Text>
+                <Text>
+                  {cleanText(message.body)}
+                </Text>
               </Box>
             ))}
           </Stack>
@@ -630,7 +733,9 @@ const ChatPage = () => {
               label="Новое сообщение"
               aria-label="Новое сообщение"
               placeholder={t('chat.messagePlaceholder')}
-              style={{ flex: 1 }}
+              style={{
+                flex: 1,
+              }}
               autosize
               minRows={1}
               maxRows={4}
