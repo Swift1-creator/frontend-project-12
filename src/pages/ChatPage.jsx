@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate } from 'react-router-dom';
 import {
   Box,
@@ -95,15 +91,13 @@ const ChatPage = () => {
   const messages = messagesQuery.data || [];
 
   useEffect(() => {
-    if (!channels.length) {
-      return;
-    }
+    if (!channels.length) return;
 
-    const exists = channels.some(
+    const channelExists = channels.some(
       (channel) => String(channel.id) === String(currentChannelId),
     );
 
-    if (!exists) {
+    if (!channelExists) {
       setCurrentChannelId(channels[0].id);
     }
   }, [channels, currentChannelId, setCurrentChannelId]);
@@ -121,7 +115,9 @@ const ChatPage = () => {
 
   const showErrorNotification = (message) => {
     notifications.show({
-      title: t('chat.notifications.operationError'),
+      title: t('chat.notifications.operationError', {
+        defaultValue: 'Ошибка операции',
+      }),
       message,
       color: 'red',
     });
@@ -135,20 +131,18 @@ const ChatPage = () => {
     });
   };
 
-  const validateChannelName = (
-    value,
-    excludedChannelId = null,
-  ) => {
+  const validateChannelName = (value, excludedChannelId = null) => {
     const name = value.trim();
 
     if (name.length < 3 || name.length > 20) {
       return t('chat.nameLength');
     }
 
-    const duplicate = channels.some((channel) => (
-      String(channel.id) !== String(excludedChannelId)
-      && channel.name.trim().toLowerCase() === name.toLowerCase()
-    ));
+    const duplicate = channels.some(
+      (channel) =>
+        String(channel.id) !== String(excludedChannelId) &&
+        channel.name.trim().toLowerCase() === name.toLowerCase(),
+    );
 
     if (duplicate) {
       return t('chat.duplicateName');
@@ -171,34 +165,31 @@ const ChatPage = () => {
       name: '',
     },
     validate: {
-      name: (value) => (
-        validateChannelName(value, editingChannel?.id)
-      ),
+      name: (value) =>
+        validateChannelName(value, editingChannel?.id),
     },
   });
 
   useEffect(() => {
     if (channelsQuery.error) {
-      captureChatError(
-        channelsQuery.error,
-        'load-channels',
-      );
+      captureChatError(channelsQuery.error, 'load-channels');
 
       notifications.show({
-        title: t('chat.notifications.loadError'),
+        title: t('chat.notifications.loadError', {
+          defaultValue: 'Ошибка загрузки',
+        }),
         message: t('chat.loadError'),
         color: 'red',
       });
     }
 
     if (messagesQuery.error) {
-      captureChatError(
-        messagesQuery.error,
-        'load-messages',
-      );
+      captureChatError(messagesQuery.error, 'load-messages');
 
       notifications.show({
-        title: t('chat.notifications.loadError'),
+        title: t('chat.notifications.loadError', {
+          defaultValue: 'Ошибка загрузки',
+        }),
         message: t('chat.loadError'),
         color: 'red',
       });
@@ -212,8 +203,12 @@ const ChatPage = () => {
   useEffect(() => {
     const handleOffline = () => {
       notifications.show({
-        title: t('chat.notifications.offline'),
-        message: t('chat.notifications.offline'),
+        title: t('chat.notifications.offline', {
+          defaultValue: 'Нет подключения',
+        }),
+        message: t('chat.notifications.offline', {
+          defaultValue: 'Нет подключения к серверу',
+        }),
         color: 'red',
       });
     };
@@ -240,39 +235,37 @@ const ChatPage = () => {
     socketRef.current = socket;
 
     const handleConnect = () => {
-      if (socket !== socketRef.current) {
-        return;
-      }
-
+      if (socket !== socketRef.current) return;
       setIsSocketConnected(true);
     };
 
     const handleDisconnect = () => {
-      if (socket !== socketRef.current) {
-        return;
-      }
+      if (socket !== socketRef.current) return;
 
       setIsSocketConnected(false);
 
       notifications.show({
-        title: t('chat.notifications.offline'),
-        message: t('chat.notifications.offline'),
+        title: t('chat.notifications.offline', {
+          defaultValue: 'Нет подключения',
+        }),
+        message: t('chat.notifications.offline', {
+          defaultValue: 'Соединение с сервером потеряно',
+        }),
         color: 'red',
       });
     };
 
     const handleConnectError = (error) => {
-      if (socket !== socketRef.current) {
-        return;
-      }
+      if (socket !== socketRef.current) return;
 
       setIsSocketConnected(false);
       captureChatError(error, 'socket-connect');
 
       notifications.show({
-        title: t('chat.notifications.offline'),
-        message: error?.message
-          || t('chat.notifications.offline'),
+        title: t('chat.notifications.offline', {
+          defaultValue: 'Нет подключения',
+        }),
+        message: error?.message || 'Ошибка подключения к серверу',
         color: 'red',
       });
     };
@@ -280,11 +273,10 @@ const ChatPage = () => {
     const handleMessage = (data) => {
       const received = data?.data ?? data;
 
-      const message = (
-        received?.message
-        || received?.data
-        || received
-      );
+      const message =
+        received?.message ||
+        received?.data ||
+        received;
 
       if (!message?.id || !message?.channelId) {
         return;
@@ -307,7 +299,7 @@ const ChatPage = () => {
     };
 
     const handleChannelChange = () => {
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: ['channels'],
       });
     };
@@ -345,28 +337,7 @@ const ChatPage = () => {
     mutationFn: createChannel,
 
     onSuccess: (newChannel) => {
-      queryClient.setQueryData(
-        ['channels'],
-        (currentChannels = []) => {
-          if (!newChannel?.id) {
-            return currentChannels;
-          }
-
-          const exists = currentChannels.some(
-            (channel) => (
-              String(channel.id) === String(newChannel.id)
-            ),
-          );
-
-          if (exists) {
-            return currentChannels;
-          }
-
-          return [...currentChannels, newChannel];
-        },
-      );
-
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: ['channels'],
       });
 
@@ -378,32 +349,27 @@ const ChatPage = () => {
       closeCreateModal();
 
       showSuccessNotification(
-        t('chat.notifications.channelCreated'),
+        t('chat.notifications.channelCreated', {
+          defaultValue: 'Канал создан',
+        }),
       );
     },
 
     onError: (error) => {
       captureChatError(error, 'create-channel');
-      showErrorNotification(t('chat.createError'));
+      showErrorNotification(
+        t('chat.createError', {
+          defaultValue: 'Не удалось создать канал',
+        }),
+      );
     },
   });
 
   const updateChannelMutation = useMutation({
     mutationFn: updateChannel,
 
-    onSuccess: (updatedChannel) => {
-      queryClient.setQueryData(
-        ['channels'],
-        (currentChannels = []) => (
-          currentChannels.map((channel) => (
-            String(channel.id) === String(updatedChannel?.id)
-              ? { ...channel, ...updatedChannel }
-              : channel
-          ))
-        ),
-      );
-
-      queryClient.invalidateQueries({
+    onSuccess: () => {
+      queryClient.refetchQueries({
         queryKey: ['channels'],
       });
 
@@ -412,48 +378,31 @@ const ChatPage = () => {
       closeEditModal();
 
       showSuccessNotification(
-        t('chat.notifications.channelRenamed'),
+        t('chat.notifications.channelRenamed', {
+          defaultValue: 'Канал переименован',
+        }),
       );
     },
 
     onError: (error) => {
       captureChatError(error, 'rename-channel');
-      showErrorNotification(t('chat.renameError'));
+      showErrorNotification(
+        t('chat.renameError', {
+          defaultValue: 'Не удалось переименовать канал',
+        }),
+      );
     },
   });
 
   const deleteChannelMutation = useMutation({
     mutationFn: deleteChannel,
 
-    onSuccess: (_, deletedChannelId) => {
-      queryClient.setQueryData(
-        ['channels'],
-        (currentChannels = []) => (
-          currentChannels.filter(
-            (channel) => (
-              String(channel.id) !== String(deletedChannelId)
-            ),
-          )
-        ),
-      );
-
-      queryClient.setQueryData(
-        ['messages'],
-        (currentMessages = []) => (
-          currentMessages.filter(
-            (message) => (
-              String(message.channelId)
-              !== String(deletedChannelId)
-            ),
-          )
-        ),
-      );
-
-      queryClient.invalidateQueries({
+    onSuccess: () => {
+      queryClient.refetchQueries({
         queryKey: ['channels'],
       });
 
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: ['messages'],
       });
 
@@ -461,13 +410,19 @@ const ChatPage = () => {
       closeDeleteModal();
 
       showSuccessNotification(
-        t('chat.notifications.channelDeleted'),
+        t('chat.notifications.channelDeleted', {
+          defaultValue: 'Канал удалён',
+        }),
       );
     },
 
     onError: (error) => {
       captureChatError(error, 'delete-channel');
-      showErrorNotification(t('chat.deleteError'));
+      showErrorNotification(
+        t('chat.deleteError', {
+          defaultValue: 'Не удалось удалить канал',
+        }),
+      );
     },
   });
 
@@ -484,15 +439,17 @@ const ChatPage = () => {
 
     onError: (error) => {
       captureChatError(error, 'send-message');
-      showErrorNotification(t('chat.sendError'));
+      showErrorNotification(
+        t('chat.sendError', {
+          defaultValue: 'Не удалось отправить сообщение',
+        }),
+      );
     },
   });
 
   const currentMessages = messages.filter(
-    (message) => (
-      String(message.channelId)
-      === String(currentChannelId)
-    ),
+    (message) =>
+      String(message.channelId) === String(currentChannelId),
   );
 
   const handleCreateSubmit = createForm.onSubmit((values) => {
@@ -502,9 +459,7 @@ const ChatPage = () => {
   });
 
   const handleEditSubmit = editForm.onSubmit((values) => {
-    if (!editingChannel) {
-      return;
-    }
+    if (!editingChannel) return;
 
     updateChannelMutation.mutate({
       id: editingChannel.id,
@@ -518,9 +473,9 @@ const ChatPage = () => {
     const body = cleanText(messageText.trim());
 
     if (
-      !body
-      || !currentChannelId
-      || sendMessageMutation.isPending
+      !body ||
+      !currentChannelId ||
+      sendMessageMutation.isPending
     ) {
       return;
     }
@@ -555,8 +510,8 @@ const ChatPage = () => {
 
   const handleDelete = () => {
     if (
-      !channelToDelete
-      || deleteChannelMutation.isPending
+      !channelToDelete ||
+      deleteChannelMutation.isPending
     ) {
       return;
     }
@@ -591,21 +546,16 @@ const ChatPage = () => {
           <Button
             size="compact-sm"
             variant="light"
-            aria-label="+"
             onClick={openCreateModal}
           >
-            +
-            {' '}
-            {t('chat.addChannel')}
+            + {t('chat.addChannel')}
           </Button>
         </Group>
 
         <Stack mt="md" gap={4}>
           {channels.map((channel) => {
-            const isActive = (
-              String(channel.id)
-              === String(currentChannelId)
-            );
+            const isActive =
+              String(channel.id) === String(currentChannelId);
 
             const canManage = channel.removable !== false;
 
@@ -628,9 +578,7 @@ const ChatPage = () => {
                   }}
                 >
                   <Text truncate>
-                    #
-                    {' '}
-                    {channel.name}
+                    # {cleanText(channel.name)}
                   </Text>
                 </Button>
 
@@ -650,14 +598,18 @@ const ChatPage = () => {
 
                     <Menu.Dropdown>
                       <Menu.Item
-                        onClick={() => handleOpenEdit(channel)}
+                        onClick={() => {
+                          handleOpenEdit(channel);
+                        }}
                       >
                         {t('chat.rename')}
                       </Menu.Item>
 
                       <Menu.Item
                         color="red"
-                        onClick={() => handleOpenDelete(channel)}
+                        onClick={() => {
+                          handleOpenDelete(channel);
+                        }}
                       >
                         {t('chat.delete')}
                       </Menu.Item>
@@ -731,7 +683,6 @@ const ChatPage = () => {
               id="message-input"
               name="body"
               label="Новое сообщение"
-              aria-label="Новое сообщение"
               placeholder={t('chat.messagePlaceholder')}
               style={{
                 flex: 1,
@@ -769,7 +720,6 @@ const ChatPage = () => {
         >
           <TextInput
             label="Имя канала"
-            aria-label="Имя канала"
             placeholder={t('chat.channelPlaceholder')}
             data-autofocus
             {...createForm.getInputProps('name')}
@@ -809,7 +759,6 @@ const ChatPage = () => {
         >
           <TextInput
             label="Имя канала"
-            aria-label="Имя канала"
             data-autofocus
             {...editForm.getInputProps('name')}
           />
@@ -851,7 +800,10 @@ const ChatPage = () => {
         <Group justify="flex-end" mt="md">
           <Button
             variant="default"
-            onClick={closeDeleteModal}
+            onClick={() => {
+              closeDeleteModal();
+              setChannelToDelete(null);
+            }}
             disabled={deleteChannelMutation.isPending}
           >
             {t('chat.cancel')}
