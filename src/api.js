@@ -77,24 +77,36 @@ export const loginUser = ({ username, password }) => authRequest(
   '/api/v1/login',
   { username, password },
   'Не удалось войти',
-  { 401: 'Неверные имя пользователя или пароль' },
+  {
+    401: 'Неверные имя пользователя или пароль',
+  },
 );
 
 export const registerUser = ({ username, password }) => authRequest(
   '/api/v1/signup',
   { username, password },
   'Не удалось зарегистрироваться',
-  { 409: 'Такой пользователь уже существует' },
+  {
+    409: 'Такой пользователь уже существует',
+  },
 );
 
-export const fetchChannels = () => request('/api/v1/channels');
-export const fetchMessages = () => request('/api/v1/messages');
+export const fetchChannels = () => request(
+  '/api/v1/channels',
+);
+
+export const fetchMessages = () => request(
+  '/api/v1/messages',
+);
 
 export const sendMessage = ({ body, channelId }) => request(
   '/api/v1/messages',
   {
     method: 'POST',
-    body: JSON.stringify({ body, channelId }),
+    body: JSON.stringify({
+      body,
+      channelId,
+    }),
   },
 );
 
@@ -102,7 +114,9 @@ export const createChannel = ({ name }) => request(
   '/api/v1/channels',
   {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({
+      name,
+    }),
   },
 );
 
@@ -110,11 +124,16 @@ export const updateChannel = ({ id, name }) => request(
   `/api/v1/channels/${id}`,
   {
     method: 'PATCH',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({
+      name,
+    }),
   },
 );
 
-export const deleteChannel = async (channelId) => {
-  const response = await api.delete(`/channels/${channelId}`);
-  return response.data;
-};
+export const deleteChannel = (channelId) => request(
+  `/api/v1/channels/${channelId}`,
+  {
+    method: 'DELETE',
+    body: JSON.stringify({}),
+  },
+);

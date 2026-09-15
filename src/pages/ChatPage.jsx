@@ -123,13 +123,15 @@ const ChatPage = () => {
     });
   };
 
-  const showSuccessNotification = (message) => {
-    notifications.show({
-      title: message,
-      message,
-      color: 'green',
-    });
-  };
+const showSuccessNotification = (title) => {
+  notifications.show({
+    id: `chat-success-${Date.now()}`,
+    title,
+    message: '',
+    color: 'green',
+    autoClose: 5000,
+  });
+};
 
   const validateChannelName = (value, excludedChannelId = null) => {
     const name = value.trim();
@@ -333,98 +335,86 @@ const ChatPage = () => {
     };
   }, [token, queryClient, t]);
 
-  const createChannelMutation = useMutation({
-    mutationFn: createChannel,
+const createChannelMutation = useMutation({
+  mutationFn: createChannel,
 
-    onSuccess: (newChannel) => {
-      queryClient.refetchQueries({
-        queryKey: ['channels'],
-      });
+  onSuccess: (newChannel) => {
+    queryClient.refetchQueries({
+      queryKey: ['channels'],
+    });
 
-      if (newChannel?.id) {
-        setCurrentChannelId(newChannel.id);
-      }
+    if (newChannel?.id) {
+      setCurrentChannelId(newChannel.id);
+    }
 
-      createForm.reset();
-      closeCreateModal();
+    createForm.reset();
+    closeCreateModal();
 
-      showSuccessNotification(
-        t('chat.notifications.channelCreated', {
-          defaultValue: 'Канал создан',
-        }),
-      );
-    },
+    showSuccessNotification('Канал создан');
+  },
 
-    onError: (error) => {
-      captureChatError(error, 'create-channel');
-      showErrorNotification(
-        t('chat.createError', {
-          defaultValue: 'Не удалось создать канал',
-        }),
-      );
-    },
-  });
+  onError: (error) => {
+    captureChatError(error, 'create-channel');
+    showErrorNotification(
+      t('chat.createError', {
+        defaultValue: 'Не удалось создать канал',
+      }),
+    );
+  },
+});
 
-  const updateChannelMutation = useMutation({
-    mutationFn: updateChannel,
+const updateChannelMutation = useMutation({
+  mutationFn: updateChannel,
 
-    onSuccess: () => {
-      queryClient.refetchQueries({
-        queryKey: ['channels'],
-      });
+  onSuccess: () => {
+    queryClient.refetchQueries({
+      queryKey: ['channels'],
+    });
 
-      editForm.reset();
-      setEditingChannel(null);
-      closeEditModal();
+    editForm.reset();
+    setEditingChannel(null);
+    closeEditModal();
 
-      showSuccessNotification(
-        t('chat.notifications.channelRenamed', {
-          defaultValue: 'Канал переименован',
-        }),
-      );
-    },
+    showSuccessNotification('Канал переименован');
+  },
 
-    onError: (error) => {
-      captureChatError(error, 'rename-channel');
-      showErrorNotification(
-        t('chat.renameError', {
-          defaultValue: 'Не удалось переименовать канал',
-        }),
-      );
-    },
-  });
+  onError: (error) => {
+    captureChatError(error, 'rename-channel');
+    showErrorNotification(
+      t('chat.renameError', {
+        defaultValue: 'Не удалось переименовать канал',
+      }),
+    );
+  },
+});
 
-  const deleteChannelMutation = useMutation({
-    mutationFn: deleteChannel,
+const deleteChannelMutation = useMutation({
+  mutationFn: deleteChannel,
 
-    onSuccess: () => {
-      queryClient.refetchQueries({
-        queryKey: ['channels'],
-      });
+  onSuccess: () => {
+    queryClient.refetchQueries({
+      queryKey: ['channels'],
+    });
 
-      queryClient.refetchQueries({
-        queryKey: ['messages'],
-      });
+    queryClient.refetchQueries({
+      queryKey: ['messages'],
+    });
 
-      setChannelToDelete(null);
-      closeDeleteModal();
+    setChannelToDelete(null);
+    closeDeleteModal();
 
-      showSuccessNotification(
-        t('chat.notifications.channelDeleted', {
-          defaultValue: 'Канал удалён',
-        }),
-      );
-    },
+    showSuccessNotification('Канал удалён');
+  },
 
-    onError: (error) => {
-      captureChatError(error, 'delete-channel');
-      showErrorNotification(
-        t('chat.deleteError', {
-          defaultValue: 'Не удалось удалить канал',
-        }),
-      );
-    },
-  });
+  onError: (error) => {
+    captureChatError(error, 'delete-channel');
+    showErrorNotification(
+      t('chat.deleteError', {
+        defaultValue: 'Не удалось удалить канал',
+      }),
+    );
+  },
+});
 
   const sendMessageMutation = useMutation({
     mutationFn: sendMessage,
@@ -578,7 +568,7 @@ const ChatPage = () => {
                   }}
                 >
                   <Text truncate>
-                    # {cleanText(channel.name)}
+                 # {channel.name}
                   </Text>
                 </Button>
 
