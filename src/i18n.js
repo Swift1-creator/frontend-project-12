@@ -9,6 +9,11 @@ const resources = {
         logout: 'Выйти',
       },
 
+      notFound: {
+        title: 'Страница не найдена',
+        backHome: 'Вернуться на главную',
+      },
+
       auth: {
         loginTitle: 'Войти',
         signupTitle: 'Регистрация',
@@ -24,8 +29,10 @@ const resources = {
 
         usernameLength:
           'Имя пользователя должно содержать от 3 до 20 символов',
+
         passwordLength:
           'Пароль должен содержать не менее 6 символов',
+
         passwordMismatch: 'Пароли не совпадают',
 
         loginError: 'Неверное имя пользователя или пароль',
@@ -64,6 +71,7 @@ const resources = {
 
         nameLength:
           'Название должно содержать от 3 до 20 символов',
+
         duplicateName:
           'Канал с таким именем уже существует',
 

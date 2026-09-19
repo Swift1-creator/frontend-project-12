@@ -9,8 +9,10 @@ import {
   Title,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { yupResolver } from 'mantine-form-yup-resolver';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import * as yup from 'yup';
 
 import { loginUser } from '../api.js';
 import { saveToken } from '../auth.js';
@@ -30,24 +32,35 @@ const LoginPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const validationSchema = yup.object({
+    username: yup
+      .string()
+      .trim()
+      .required(t('auth.required')),
+
+    password: yup
+      .string()
+      .required(t('auth.required')),
+  });
+
   const form = useForm({
-    initialValues: { username: '', password: '' },
-    validate: {
-      username: (value) => (
-        value.trim().length > 0 ? null : t('auth.required')
-      ),
-      password: (value) => (
-        value.length > 0 ? null : t('auth.required')
-      ),
+    initialValues: {
+      username: '',
+      password: '',
     },
+
+    validate: yupResolver(validationSchema),
   });
 
   const loginMutation = useMutation({
     mutationFn: loginUser,
+
     onSuccess: (response) => {
       const token = getTokenFromResponse(response);
 
-      if (!token) return;
+      if (!token) {
+        return;
+      }
 
       saveToken(token);
       navigate('/', { replace: true });
@@ -62,10 +75,21 @@ const LoginPage = () => {
   });
 
   return (
-    <Box style={{ maxWidth: 420, margin: '0 auto', padding: 24 }}>
-      <Title order={1} mb="xl">{t('auth.loginTitle')}</Title>
+    <Box
+      style={{
+        maxWidth: 420,
+        margin: '0 auto',
+        padding: 24,
+      }}
+    >
+      <Title order={1} mb="xl">
+        {t('auth.loginTitle')}
+      </Title>
 
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+      >
         <Stack>
           <TextInput
             id="username"
@@ -87,15 +111,22 @@ const LoginPage = () => {
 
           {loginMutation.isError && (
             <Alert color="red" role="alert">
-              Неверные имя пользователя или пароль
+              {t('auth.loginError')}
             </Alert>
           )}
 
-          <Button type="submit" loading={loginMutation.isPending}>
+          <Button
+            type="submit"
+            loading={loginMutation.isPending}
+          >
             {t('auth.login')}
           </Button>
 
-          <Button component={Link} to="/signup" variant="subtle">
+          <Button
+            component={Link}
+            to="/signup"
+            variant="subtle"
+          >
             {t('auth.toSignup')}
           </Button>
         </Stack>

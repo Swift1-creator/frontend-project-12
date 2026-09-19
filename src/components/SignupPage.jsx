@@ -20,7 +20,6 @@ import {
 } from '@mantine/core';
 
 import { getToken } from '../auth.js';
-
 const SignupPage = () => {
   const navigate = useNavigate();
 

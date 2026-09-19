@@ -9,8 +9,10 @@ import {
   Title,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { yupResolver } from 'mantine-form-yup-resolver';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import * as yup from 'yup';
 
 import { registerUser } from '../api.js';
 import { saveToken } from '../auth.js';
@@ -19,6 +21,28 @@ const SignupPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const validationSchema = yup.object({
+    username: yup
+      .string()
+      .trim()
+      .required(t('auth.required'))
+      .min(3, 'От 3 до 20 символов')
+      .max(20, 'От 3 до 20 символов'),
+
+    password: yup
+      .string()
+      .required(t('auth.required'))
+      .min(6, 'Не менее 6 символов'),
+
+    passwordConfirmation: yup
+      .string()
+      .required(t('auth.required'))
+      .oneOf(
+        [yup.ref('password')],
+        'Пароли должны совпадать',
+      ),
+  });
+
   const form = useForm({
     initialValues: {
       username: '',
@@ -26,31 +50,7 @@ const SignupPage = () => {
       passwordConfirmation: '',
     },
 
-    validate: {
-      username: (value) => {
-        const length = value.trim().length;
-
-        return length >= 3 && length <= 20
-          ? null
-          : 'От 3 до 20 символов';
-      },
-
-      password: (value) => (
-        value.length >= 6
-          ? null
-          : 'Не менее 6 символов'
-      ),
-
-      passwordConfirmation: (value, values) => {
-        if (!value) {
-          return t('auth.required');
-        }
-
-        return value === values.password
-          ? null
-          : 'Пароли должны совпадать';
-      },
-    },
+    validate: yupResolver(validationSchema),
   });
 
   const signupMutation = useMutation({
