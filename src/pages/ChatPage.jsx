@@ -9,6 +9,7 @@ import {
   Title,
   Button,
 } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import { yupResolver } from 'mantine-form-yup-resolver';
@@ -37,9 +38,9 @@ import { MessageInput } from '../components/MessageInput.jsx';
 import { ChannelModals } from '../components/ChannelModals.jsx';
 import { useChatStore } from '../store.js';
 
-const normalizeResponse = (response) => {
-  return response?.data ?? response;
-};
+const normalizeResponse = (response) => (
+  response?.data ?? response
+);
 
 const normalizeChannels = (response) => {
   const data = normalizeResponse(response);
@@ -222,6 +223,18 @@ const ChatPage = () => {
       if (createdChannel?.id !== undefined) {
         setCurrentChannelId(createdChannel.id);
       }
+
+      notifications.show({
+        color: 'green',
+        message: 'Канал создан',
+      });
+    },
+
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        message: error.message || 'Не удалось создать канал',
+      });
     },
   });
 
@@ -236,6 +249,18 @@ const ChatPage = () => {
       setEditingChannel(null);
       editForm.reset();
       closeEditModal();
+
+      notifications.show({
+        color: 'green',
+        message: 'Канал переименован',
+      });
+    },
+
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        message: error.message || 'Не удалось переименовать канал',
+      });
     },
   });
 
@@ -257,10 +282,23 @@ const ChatPage = () => {
         );
 
         setCurrentChannelId(nextChannel?.id ?? null);
+        setMessageText('');
       }
 
       setChannelToDelete(null);
       closeDeleteModal();
+
+      notifications.show({
+        color: 'green',
+        message: 'Канал удалён',
+      });
+    },
+
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        message: error.message || 'Не удалось удалить канал',
+      });
     },
   });
 
@@ -272,6 +310,13 @@ const ChatPage = () => {
 
       await queryClient.invalidateQueries({
         queryKey: ['messages'],
+      });
+    },
+
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        message: error.message || 'Не удалось отправить сообщение',
       });
     },
   });
@@ -357,6 +402,11 @@ const ChatPage = () => {
     return <Navigate to="/login" replace />;
   }
 
+  const handleChangeChannel = (channelId) => {
+    setCurrentChannelId(channelId);
+    setMessageText('');
+  };
+
   const handleCreateSubmit = createForm.onSubmit(
     (values) => {
       createMutation.mutate({
@@ -379,7 +429,10 @@ const ChatPage = () => {
   );
 
   const handleDelete = () => {
-    if (!channelToDelete?.id) {
+    if (
+      channelToDelete?.id === undefined
+      || channelToDelete?.id === null
+    ) {
       return;
     }
 
@@ -452,7 +505,7 @@ const ChatPage = () => {
           <ChatSidebar
             channels={channels}
             currentChannelId={currentChannelId}
-            onChangeChannel={setCurrentChannelId}
+            onChangeChannel={handleChangeChannel}
             onOpenEdit={(channel) => {
               setEditingChannel(channel);
 

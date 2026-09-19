@@ -2,7 +2,9 @@ import { getToken } from './auth.js';
 
 const getHeaders = () => {
   const token = getToken();
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {
+    'Content-Type': 'application/json',
+  };
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -20,7 +22,12 @@ const parseError = async (
 
   try {
     const data = await response.json();
-    errorMessage = data.message || data.error || errorMessage;
+
+    errorMessage = (
+      data.message
+      || data.error
+      || errorMessage
+    );
   } catch {
     // Ответ может быть пустым или не содержать JSON.
   }
@@ -56,13 +63,19 @@ const authRequest = async (
 ) => {
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     throw new Error(
-      await parseError(response, defaultMessage, statusMessages),
+      await parseError(
+        response,
+        defaultMessage,
+        statusMessages,
+      ),
     );
   }
 
@@ -73,22 +86,32 @@ const authRequest = async (
   return response.json();
 };
 
-export const loginUser = ({ username, password }) => authRequest(
-  '/api/v1/login',
-  { username, password },
-  'Не удалось войти',
-  {
-    401: 'Неверные имя пользователя или пароль',
-  },
+export const loginUser = ({ username, password }) => (
+  authRequest(
+    '/api/v1/login',
+    {
+      username,
+      password,
+    },
+    'Не удалось войти',
+    {
+      401: 'Неверные имя пользователя или пароль',
+    },
+  )
 );
 
-export const registerUser = ({ username, password }) => authRequest(
-  '/api/v1/signup',
-  { username, password },
-  'Не удалось зарегистрироваться',
-  {
-    409: 'Такой пользователь уже существует',
-  },
+export const registerUser = ({ username, password }) => (
+  authRequest(
+    '/api/v1/signup',
+    {
+      username,
+      password,
+    },
+    'Не удалось зарегистрироваться',
+    {
+      409: 'Такой пользователь уже существует',
+    },
+  )
 );
 
 export const fetchChannels = () => request(
@@ -134,6 +157,5 @@ export const deleteChannel = (channelId) => request(
   `/api/v1/channels/${channelId}`,
   {
     method: 'DELETE',
-    body: JSON.stringify({}),
   },
 );

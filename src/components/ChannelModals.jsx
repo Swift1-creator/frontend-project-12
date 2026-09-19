@@ -46,6 +46,7 @@ export const ChannelModals = ({
 
           <Group justify="flex-end" mt="md">
             <Button
+              type="button"
               variant="default"
               onClick={closeCreateModal}
             >
@@ -77,6 +78,7 @@ export const ChannelModals = ({
 
           <Group justify="flex-end" mt="md">
             <Button
+              type="button"
               variant="default"
               onClick={closeEditModal}
             >
@@ -109,6 +111,7 @@ export const ChannelModals = ({
 
         <Group justify="flex-end" mt="md">
           <Button
+            type="button"
             variant="default"
             onClick={closeDeleteModal}
           >
@@ -116,9 +119,10 @@ export const ChannelModals = ({
           </Button>
 
           <Button
+            type="button"
             color="red"
-            onClick={handleDelete}
             loading={isDeleting}
+            onClick={handleDelete}
           >
             {t('chat.delete')}
           </Button>
