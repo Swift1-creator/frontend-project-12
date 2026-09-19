@@ -1,61 +1,49 @@
-import { Textarea, Button, Group, Box } from '@mantine/core';
-import { useForm } from '@mantine/form';
-import { yupResolver } from 'mantine-form-yup-resolver';
-import * as yup from 'yup';
+import { Button, Group, Textarea } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 
 export const MessageInput = ({
   value,
   onChange,
   onSubmit,
-  isPending,
-  placeholder = 'Введите сообщение',
+  isPending = false,
+  placeholder,
 }) => {
-  const schema = yup.object({
-    body: yup.string().trim().required('Введите сообщение'),
-  });
+  const { t } = useTranslation();
 
-  const form = useForm({
-    initialValues: {
-      body: value || '',
-    },
-    validate: yupResolver(schema),
-  });
+  const handleSubmit = (event) => {
+    event.preventDefault();
 
-  const handleSubmit = form.onSubmit((values) => {
-    onSubmit(values.body);
-    form.reset();
-  });
+    const body = value.trim();
+
+    if (!body || isPending) {
+      return;
+    }
+
+    onSubmit(body);
+  };
 
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit}
-      mt="md"
-    >
+    <form onSubmit={handleSubmit}>
       <Group align="flex-end" wrap="nowrap">
         <Textarea
-          style={{ flex: 1 }}
-          placeholder={placeholder}
           value={value}
-          onChange={(event) => {
-            onChange(event.currentTarget.value);
-            form.setFieldValue(
-              'body',
-              event.currentTarget.value
-            );
-          }}
-          rows={1}
-          minRows={1}
+          onChange={(event) => onChange(event.currentTarget.value)}
+          placeholder={placeholder}
+          aria-label="Новое сообщение"
           autosize
+          minRows={1}
+          maxRows={5}
+          style={{ flex: 1 }}
         />
 
         <Button
           type="submit"
           loading={isPending}
+          disabled={!value.trim()}
         >
-          Отправить
+          {t('chat.send')}
         </Button>
       </Group>
-    </Box>
+    </form>
   );
 };

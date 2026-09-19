@@ -1,16 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
+  Alert,
   Box,
   Group,
-  Title,
+  Loader,
   Text,
+  Title,
   Button,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import { yupResolver } from 'mantine-form-yup-resolver';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { io } from 'socket.io-client';
 import * as yup from 'yup';
@@ -44,17 +50,26 @@ const ChatPage = () => {
 
   const [
     createModalOpened,
-    { open: openCreateModal, close: closeCreateModal },
+    {
+      open: openCreateModal,
+      close: closeCreateModal,
+    },
   ] = useDisclosure(false);
 
   const [
     editModalOpened,
-    { open: openEditModal, close: closeEditModal },
+    {
+      open: openEditModal,
+      close: closeEditModal,
+    },
   ] = useDisclosure(false);
 
   const [
     deleteModalOpened,
-    { open: openDeleteModal, close: closeDeleteModal },
+    {
+      open: openDeleteModal,
+      close: closeDeleteModal,
+    },
   ] = useDisclosure(false);
 
   const currentChannelId = useChatStore(
@@ -77,15 +92,43 @@ const ChatPage = () => {
     enabled: Boolean(token),
   });
 
-  const channels = channelsQuery.data || [];
-  const messages = messagesQuery.data || [];
+  const channels = Array.isArray(channelsQuery.data)
+    ? channelsQuery.data
+    : [];
 
-  const currentMessages = useMemo(() => {
-    return messages.filter(
-      (message) =>
-        String(message.channelId) === String(currentChannelId),
+  const messages = Array.isArray(messagesQuery.data)
+    ? messagesQuery.data
+    : [];
+
+  useEffect(() => {
+    if (channels.length === 0) {
+      return;
+    }
+
+    const currentChannelExists = channels.some(
+      (channel) => (
+        String(channel.id) === String(currentChannelId)
+      ),
     );
-  }, [messages, currentChannelId]);
+
+    if (!currentChannelExists) {
+      setCurrentChannelId(channels[0].id);
+    }
+  }, [
+    channels,
+    currentChannelId,
+    setCurrentChannelId,
+  ]);
+
+  const currentMessages = useMemo(
+    () => messages.filter(
+      (message) => (
+        String(message.channelId)
+        === String(currentChannelId)
+      ),
+    ),
+    [messages, currentChannelId],
+  );
 
   const createChannelSchema = yup.object({
     name: yup
@@ -106,29 +149,39 @@ const ChatPage = () => {
   });
 
   const createForm = useForm({
-    initialValues: { name: '' },
+    initialValues: {
+      name: '',
+    },
     validate: yupResolver(createChannelSchema),
   });
 
   const editForm = useForm({
-    initialValues: { name: '' },
+    initialValues: {
+      name: '',
+    },
     validate: yupResolver(editChannelSchema),
   });
 
   const createMutation = useMutation({
     mutationFn: createChannel,
-    onSuccess: async () => {
+
+    onSuccess: async (createdChannel) => {
       await queryClient.invalidateQueries({
         queryKey: ['channels'],
       });
 
       createForm.reset();
       closeCreateModal();
+
+      if (createdChannel?.id) {
+        setCurrentChannelId(createdChannel.id);
+      }
     },
   });
 
   const editMutation = useMutation({
     mutationFn: updateChannel,
+
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['channels'],
@@ -141,11 +194,24 @@ const ChatPage = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => deleteChannel(id),
-    onSuccess: async () => {
+    mutationFn: deleteChannel,
+
+    onSuccess: async (_data, deletedId) => {
       await queryClient.invalidateQueries({
         queryKey: ['channels'],
       });
+
+      if (
+        String(currentChannelId) === String(deletedId)
+      ) {
+        const nextChannel = channels.find(
+          (channel) => (
+            String(channel.id) !== String(deletedId)
+          ),
+        );
+
+        setCurrentChannelId(nextChannel?.id ?? null);
+      }
 
       setChannelToDelete(null);
       closeDeleteModal();
@@ -154,6 +220,7 @@ const ChatPage = () => {
 
   const sendMessageMutation = useMutation({
     mutationFn: sendMessage,
+
     onSuccess: async () => {
       setMessageText('');
 
@@ -176,21 +243,6 @@ const ChatPage = () => {
 
     socketRef.current = socket;
 
-    socket.on('connect', () => {
-      console.log('Socket подключён:', socket.id);
-      setIsSocketConnected(true);
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('Ошибка подключения Socket.IO:', error.message);
-      setIsSocketConnected(false);
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('Socket отключён:', reason);
-      setIsSocketConnected(false);
-    });
-
     const refreshData = () => {
       queryClient.invalidateQueries({
         queryKey: ['channels'],
@@ -201,7 +253,24 @@ const ChatPage = () => {
       });
     };
 
-    const events = [
+    socket.on('connect', () => {
+      setIsSocketConnected(true);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error(
+        'Ошибка подключения Socket.IO:',
+        error.message,
+      );
+
+      setIsSocketConnected(false);
+    });
+
+    socket.on('disconnect', () => {
+      setIsSocketConnected(false);
+    });
+
+    const socketEvents = [
       'newChannel',
       'channelCreated',
       'channelUpdated',
@@ -211,12 +280,12 @@ const ChatPage = () => {
       'messageCreated',
     ];
 
-    events.forEach((eventName) => {
+    socketEvents.forEach((eventName) => {
       socket.on(eventName, refreshData);
     });
 
     return () => {
-      events.forEach((eventName) => {
+      socketEvents.forEach((eventName) => {
         socket.off(eventName, refreshData);
       });
 
@@ -229,22 +298,26 @@ const ChatPage = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const handleCreateSubmit = createForm.onSubmit((values) => {
-    createMutation.mutate({
-      name: values.name.trim(),
-    });
-  });
+  const handleCreateSubmit = createForm.onSubmit(
+    (values) => {
+      createMutation.mutate({
+        name: values.name.trim(),
+      });
+    },
+  );
 
-  const handleEditSubmit = editForm.onSubmit((values) => {
-    if (!editingChannel) {
-      return;
-    }
+  const handleEditSubmit = editForm.onSubmit(
+    (values) => {
+      if (!editingChannel) {
+        return;
+      }
 
-    editMutation.mutate({
-      id: editingChannel.id,
-      name: values.name.trim(),
-    });
-  });
+      editMutation.mutate({
+        id: editingChannel.id,
+        name: values.name.trim(),
+      });
+    },
+  );
 
   const handleDelete = () => {
     if (!channelToDelete) {
@@ -255,15 +328,25 @@ const ChatPage = () => {
   };
 
   const handleSendMessage = (body) => {
-    if (!currentChannelId) {
+    const trimmedBody = body.trim();
+
+    if (!currentChannelId || !trimmedBody) {
       return;
     }
 
     sendMessageMutation.mutate({
       channelId: currentChannelId,
-      body,
+      body: trimmedBody,
     });
   };
+
+  if (channelsQuery.isLoading) {
+    return (
+      <Group justify="center" p="xl">
+        <Loader />
+      </Group>
+    );
+  }
 
   return (
     <Box
@@ -298,22 +381,30 @@ const ChatPage = () => {
           </Button>
         </Group>
 
-        <ChatSidebar
-          channels={channels}
-          currentChannelId={currentChannelId}
-          onChangeChannel={setCurrentChannelId}
-          onOpenEdit={(channel) => {
-            setEditingChannel(channel);
-            editForm.setValues({
-              name: channel.name,
-            });
-            openEditModal();
-          }}
-          onOpenDelete={(channel) => {
-            setChannelToDelete(channel);
-            openDeleteModal();
-          }}
-        />
+        {channelsQuery.isError ? (
+          <Alert color="red" role="alert">
+            Не удалось загрузить каналы
+          </Alert>
+        ) : (
+          <ChatSidebar
+            channels={channels}
+            currentChannelId={currentChannelId}
+            onChangeChannel={setCurrentChannelId}
+            onOpenEdit={(channel) => {
+              setEditingChannel(channel);
+
+              editForm.setValues({
+                name: channel.name,
+              });
+
+              openEditModal();
+            }}
+            onOpenDelete={(channel) => {
+              setChannelToDelete(channel);
+              openDeleteModal();
+            }}
+          />
+        )}
       </Box>
 
       <Box
@@ -359,6 +450,7 @@ const ChatPage = () => {
           onSubmit={handleSendMessage}
           isPending={sendMessageMutation.isPending}
           placeholder={t('chat.messagePlaceholder')}
+          aria-label="Новое сообщение"
         />
       </Box>
 
