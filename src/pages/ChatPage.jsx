@@ -42,22 +42,35 @@ const normalizeResponse = (response) => (
   response?.data ?? response
 );
 
+const censorChannelName = (name) => {
+  if (typeof name !== 'string') {
+    return name;
+  }
+
+  return name
+    .replace(/boobs/gi, '***')
+    .replace(/fuck/gi, '***')
+    .replace(/shit/gi, '***')
+    .replace(/bitch/gi, '***');
+};
+
 const normalizeChannels = (response) => {
   const data = normalizeResponse(response);
 
+  let channels = [];
+
   if (Array.isArray(data)) {
-    return data;
+    channels = data;
+  } else if (Array.isArray(data?.channels)) {
+    channels = data.channels;
+  } else if (Array.isArray(data?.data)) {
+    channels = data.data;
   }
 
-  if (Array.isArray(data?.channels)) {
-    return data.channels;
-  }
-
-  if (Array.isArray(data?.data)) {
-    return data.data;
-  }
-
-  return [];
+  return channels.map((channel) => ({
+    ...channel,
+    name: censorChannelName(channel.name ?? ''),
+  }));
 };
 
 const normalizeMessages = (response) => {
@@ -80,8 +93,16 @@ const normalizeMessages = (response) => {
 
 const normalizeCreatedChannel = (response) => {
   const data = normalizeResponse(response);
+  const channel = data?.channel ?? data?.data ?? data;
 
-  return data?.channel ?? data?.data ?? data;
+  if (!channel || typeof channel !== 'object') {
+    return null;
+  }
+
+  return {
+    ...channel,
+    name: censorChannelName(channel.name ?? ''),
+  };
 };
 
 const ChatPage = () => {
@@ -267,21 +288,41 @@ const createMutation = useMutation({
 const editMutation = useMutation({
   mutationFn: updateChannel,
 
-  onSuccess: async () => {
-    await queryClient.invalidateQueries({
+  onSuccess: (response) => {
+  const updatedChannel = normalizeCreatedChannel(response);
+
+  if (updatedChannel?.id !== undefined) {
+    queryClient.setQueryData(
+      ['channels'],
+      (oldChannels = []) => oldChannels.map((channel) => (
+        String(channel.id)
+        === String(updatedChannel.id)
+          ? {
+            ...channel,
+            ...updatedChannel,
+            name: censorChannelName(
+              updatedChannel.name ?? channel.name,
+            ),
+          }
+          : channel
+      )),
+    );
+  } else {
+    queryClient.invalidateQueries({
       queryKey: ['channels'],
     });
+  }
 
-    setEditingChannel(null);
-    editForm.reset();
-    closeEditModal();
+  setEditingChannel(null);
+  editForm.reset();
+  closeEditModal();
 
-    notifications.show({
-      title: 'Канал переименован',
-      message: '',
-      color: 'green',
-    });
-  },
+  notifications.show({
+    title: 'Канал переименован',
+    message: '',
+    color: 'green',
+  });
+},
 
   onError: (error) => {
     notifications.show({
@@ -293,59 +334,62 @@ const editMutation = useMutation({
   },
 });
 
-const deleteMutation = useMutation({
-  mutationFn: deleteChannel,
+ const deleteMutation = useMutation({
+    mutationFn: deleteChannel,
 
-  onSuccess: async (_data, deletedId) => {
-    const oldChannels = queryClient.getQueryData(
-      ['channels'],
-    ) ?? [];
+    onSuccess: (_data, deletedId) => {
+      const oldChannels = queryClient.getQueryData(
+        ['channels'],
+      ) ?? [];
 
-    const remainingChannels = oldChannels.filter(
-      (channel) => (
-        String(channel.id)
-        !== String(deletedId)
-      ),
-    );
-
-    queryClient.setQueryData(
-      ['channels'],
-      remainingChannels,
-    );
-
-    if (
-      String(currentChannelId)
-      === String(deletedId)
-    ) {
-      setCurrentChannelId(
-        remainingChannels[0]?.id ?? null,
+      const remainingChannels = oldChannels.filter(
+        (channel) => (
+          String(channel.id)
+          !== String(deletedId)
+        ),
       );
-      setMessageText('');
-    }
 
-    setChannelToDelete(null);
-    closeDeleteModal();
+      queryClient.setQueryData(
+        ['channels'],
+        remainingChannels,
+      );
 
-    notifications.show({
-      title: 'Канал удалён',
-      message: '',
-      color: 'green',
-    });
+      if (
+        String(currentChannelId)
+        === String(deletedId)
+      ) {
+        setCurrentChannelId(
+          remainingChannels[0]?.id ?? null,
+        );
 
-    await queryClient.invalidateQueries({
-      queryKey: ['channels'],
-    });
-  },
+        setMessageText('');
+      }
 
-  onError: (error) => {
-    notifications.show({
-      title: 'Ошибка',
-      message: error.message
-        || 'Не удалось удалить канал',
-      color: 'red',
-    });
-  },
-});
+      setChannelToDelete(null);
+      closeDeleteModal();
+
+      notifications.show({
+        title: 'Канал удалён',
+        message: '',
+        color: 'green',
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ['channels'],
+      });
+    },
+
+    onError: (error) => {
+      notifications.show({
+        title: 'Ошибка',
+        message: error.message
+          || 'Не удалось удалить канал',
+        color: 'red',
+      });
+    },
+  });
+
+
 
   const sendMessageMutation = useMutation({
     mutationFn: sendMessage,
@@ -551,15 +595,15 @@ const deleteMutation = useMutation({
             channels={channels}
             currentChannelId={currentChannelId}
             onChangeChannel={handleChangeChannel}
-            onOpenEdit={(channel) => {
-              setEditingChannel(channel);
+onOpenEdit={(channel) => {
+  setEditingChannel(channel);
 
-              editForm.setValues({
-                name: channel.name,
-              });
+  editForm.setValues({
+    name: channel.name ?? '',
+  });
 
-              openEditModal();
-            }}
+  openEditModal();
+}}
             onOpenDelete={(channel) => {
               setChannelToDelete(channel);
               openDeleteModal();
