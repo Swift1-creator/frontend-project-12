@@ -17,16 +17,19 @@ import * as yup from 'yup';
 import { loginUser } from '../api.js';
 import { saveToken } from '../auth.js';
 
-const getTokenFromResponse = (response) => (
-  response?.token
-  || response?.accessToken
-  || response?.access_token
-  || response?.data?.token
-  || response?.data?.accessToken
-  || response?.data?.access_token
-  || response?.user?.token
-  || response?.data?.user?.token
-);
+const getTokenFromResponse = (response) => {
+  // loginUser может вернуть как response.data, так и полный Axios response.
+  const data = response?.data ?? response;
+
+  return (
+    data?.token
+    || data?.accessToken
+    || data?.access_token
+    || data?.user?.token
+    || data?.user?.accessToken
+    || data?.user?.access_token
+  );
+};
 
 const LoginPage = () => {
   const { t } = useTranslation();
@@ -37,7 +40,6 @@ const LoginPage = () => {
       .string()
       .trim()
       .required(t('auth.required')),
-
     password: yup
       .string()
       .required(t('auth.required')),
@@ -48,7 +50,6 @@ const LoginPage = () => {
       username: '',
       password: '',
     },
-
     validate: yupResolver(validationSchema),
   });
 
@@ -59,6 +60,7 @@ const LoginPage = () => {
       const token = getTokenFromResponse(response);
 
       if (!token) {
+        console.error('Токен отсутствует в ответе login:', response);
         return;
       }
 
@@ -86,10 +88,7 @@ const LoginPage = () => {
         {t('auth.loginTitle')}
       </Title>
 
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-      >
+      <Box component="form" onSubmit={handleSubmit}>
         <Stack>
           <TextInput
             id="username"
@@ -111,7 +110,7 @@ const LoginPage = () => {
 
           {loginMutation.isError && (
             <Alert color="red" role="alert">
-              {t('auth.loginError')}
+              Неверные имя пользователя или пароль
             </Alert>
           )}
 
