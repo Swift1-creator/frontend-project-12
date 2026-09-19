@@ -37,6 +37,52 @@ import { MessageInput } from '../components/MessageInput.jsx';
 import { ChannelModals } from '../components/ChannelModals.jsx';
 import { useChatStore } from '../store.js';
 
+const normalizeResponse = (response) => {
+  return response?.data ?? response;
+};
+
+const normalizeChannels = (response) => {
+  const data = normalizeResponse(response);
+
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.channels)) {
+    return data.channels;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+
+  return [];
+};
+
+const normalizeMessages = (response) => {
+  const data = normalizeResponse(response);
+
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.messages)) {
+    return data.messages;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+
+  return [];
+};
+
+const normalizeCreatedChannel = (response) => {
+  const data = normalizeResponse(response);
+
+  return data?.channel ?? data;
+};
+
 const ChatPage = () => {
   const { t } = useTranslation();
   const token = getToken();
@@ -82,26 +128,33 @@ const ChatPage = () => {
 
   const channelsQuery = useQuery({
     queryKey: ['channels'],
-    queryFn: fetchChannels,
+    queryFn: async () => {
+      const response = await fetchChannels();
+
+      return normalizeChannels(response);
+    },
     enabled: Boolean(token),
   });
 
   const messagesQuery = useQuery({
     queryKey: ['messages'],
-    queryFn: fetchMessages,
+    queryFn: async () => {
+      const response = await fetchMessages();
+
+      return normalizeMessages(response);
+    },
     enabled: Boolean(token),
   });
 
-  const channels = Array.isArray(channelsQuery.data)
-    ? channelsQuery.data
-    : [];
-
-  const messages = Array.isArray(messagesQuery.data)
-    ? messagesQuery.data
-    : [];
+  const channels = channelsQuery.data ?? [];
+  const messages = messagesQuery.data ?? [];
 
   useEffect(() => {
     if (channels.length === 0) {
+      if (currentChannelId !== null) {
+        setCurrentChannelId(null);
+      }
+
       return;
     }
 
@@ -130,42 +183,35 @@ const ChatPage = () => {
     [messages, currentChannelId],
   );
 
-  const createChannelSchema = yup.object({
+  const channelSchema = yup.object({
     name: yup
       .string()
       .trim()
-      .min(2, 'Минимум 2 символа')
-      .max(50, 'Максимум 50 символов')
-      .required('Введите название канала'),
-  });
-
-  const editChannelSchema = yup.object({
-    name: yup
-      .string()
-      .trim()
-      .min(2, 'Минимум 2 символа')
-      .max(50, 'Максимум 50 символов')
-      .required('Введите название канала'),
+      .min(3, 'От 3 до 20 символов')
+      .max(20, 'От 3 до 20 символов')
+      .required('От 3 до 20 символов'),
   });
 
   const createForm = useForm({
     initialValues: {
       name: '',
     },
-    validate: yupResolver(createChannelSchema),
+    validate: yupResolver(channelSchema),
   });
 
   const editForm = useForm({
     initialValues: {
       name: '',
     },
-    validate: yupResolver(editChannelSchema),
+    validate: yupResolver(channelSchema),
   });
 
   const createMutation = useMutation({
     mutationFn: createChannel,
 
-    onSuccess: async (createdChannel) => {
+    onSuccess: async (response) => {
+      const createdChannel = normalizeCreatedChannel(response);
+
       await queryClient.invalidateQueries({
         queryKey: ['channels'],
       });
@@ -173,7 +219,7 @@ const ChatPage = () => {
       createForm.reset();
       closeCreateModal();
 
-      if (createdChannel?.id) {
+      if (createdChannel?.id !== undefined) {
         setCurrentChannelId(createdChannel.id);
       }
     },
@@ -243,11 +289,13 @@ const ChatPage = () => {
 
     socketRef.current = socket;
 
-    const refreshData = () => {
+    const refreshChannels = () => {
       queryClient.invalidateQueries({
         queryKey: ['channels'],
       });
+    };
 
+    const refreshMessages = () => {
       queryClient.invalidateQueries({
         queryKey: ['messages'],
       });
@@ -270,23 +318,34 @@ const ChatPage = () => {
       setIsSocketConnected(false);
     });
 
-    const socketEvents = [
+    const channelEvents = [
       'newChannel',
       'channelCreated',
       'channelUpdated',
       'channelRemoved',
       'channelDeleted',
+    ];
+
+    const messageEvents = [
       'newMessage',
       'messageCreated',
     ];
 
-    socketEvents.forEach((eventName) => {
-      socket.on(eventName, refreshData);
+    channelEvents.forEach((eventName) => {
+      socket.on(eventName, refreshChannels);
+    });
+
+    messageEvents.forEach((eventName) => {
+      socket.on(eventName, refreshMessages);
     });
 
     return () => {
-      socketEvents.forEach((eventName) => {
-        socket.off(eventName, refreshData);
+      channelEvents.forEach((eventName) => {
+        socket.off(eventName, refreshChannels);
+      });
+
+      messageEvents.forEach((eventName) => {
+        socket.off(eventName, refreshMessages);
       });
 
       socket.disconnect();
@@ -320,7 +379,7 @@ const ChatPage = () => {
   );
 
   const handleDelete = () => {
-    if (!channelToDelete) {
+    if (!channelToDelete?.id) {
       return;
     }
 
@@ -330,7 +389,11 @@ const ChatPage = () => {
   const handleSendMessage = (body) => {
     const trimmedBody = body.trim();
 
-    if (!currentChannelId || !trimmedBody) {
+    if (
+      currentChannelId === null
+      || currentChannelId === undefined
+      || !trimmedBody
+    ) {
       return;
     }
 
@@ -403,6 +466,7 @@ const ChatPage = () => {
               setChannelToDelete(channel);
               openDeleteModal();
             }}
+            canManage
           />
         )}
       </Box>
@@ -438,10 +502,20 @@ const ChatPage = () => {
             overflowY: 'auto',
           }}
         >
-          <MessageList
-            messages={currentMessages}
-            currentUser={t('chat.defaultUser')}
-          />
+          {messagesQuery.isLoading ? (
+            <Group justify="center" p="xl">
+              <Loader />
+            </Group>
+          ) : messagesQuery.isError ? (
+            <Alert color="red" role="alert">
+              Не удалось загрузить сообщения
+            </Alert>
+          ) : (
+            <MessageList
+              messages={currentMessages}
+              currentUser={t('chat.defaultUser')}
+            />
+          )}
         </Box>
 
         <MessageInput
