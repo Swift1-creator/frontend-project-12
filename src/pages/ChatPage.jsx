@@ -114,8 +114,9 @@ const ChatPage = () => {
   const token = getToken();
   const queryClient = useQueryClient();
 
-  const socketRef = useRef(null);
-  const skipNextChannelRefreshRef = useRef(false);
+const socketRef = useRef(null);
+const skipChannelRefreshRef = useRef(false);
+const skipChannelRefreshTimerRef = useRef(null);
 
   const [messageText, setMessageText] = useState('');
   const [isSocketConnected, setIsSocketConnected] = useState(false);
@@ -430,16 +431,15 @@ const ChatPage = () => {
 
     socketRef.current = socket;
 
-    const refreshChannels = () => {
-      if (skipNextChannelRefreshRef.current) {
-        skipNextChannelRefreshRef.current = false;
-        return;
-      }
+const refreshChannels = () => {
+  if (skipChannelRefreshRef.current) {
+    return;
+  }
 
-      queryClient.invalidateQueries({
-        queryKey: ['channels'],
-      });
-    };
+  queryClient.invalidateQueries({
+    queryKey: ['channels'],
+  });
+};
 
     const refreshMessages = () => {
       queryClient.invalidateQueries({
@@ -508,9 +508,22 @@ const ChatPage = () => {
     setMessageText('');
   };
 
+const skipChannelRefreshTemporarily = () => {
+  skipChannelRefreshRef.current = true;
+
+  if (skipChannelRefreshTimerRef.current) {
+    clearTimeout(skipChannelRefreshTimerRef.current);
+  }
+
+  skipChannelRefreshTimerRef.current = setTimeout(() => {
+    skipChannelRefreshRef.current = false;
+    skipChannelRefreshTimerRef.current = null;
+  }, 1000);
+};
+
   const handleCreateSubmit = createForm.onSubmit(
     (values) => {
-      skipNextChannelRefreshRef.current = true;
+      skipChannelRefreshTemporarily();
 
       createMutation.mutate({
         name: values.name.trim(),
@@ -524,7 +537,7 @@ const ChatPage = () => {
         return;
       }
 
-      skipNextChannelRefreshRef.current = true;
+      skipChannelRefreshTemporarily();
 
       editMutation.mutate({
         id: editingChannel.id,
@@ -540,7 +553,7 @@ const handleDelete = () => {
     return;
   }
 
-  skipNextChannelRefreshRef.current = true;
+  skipChannelRefreshTemporarily();
 
   deleteMutation.mutate(deletedId);
 };
