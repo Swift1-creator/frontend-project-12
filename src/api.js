@@ -157,5 +157,6 @@ export const deleteChannel = (channelId) => request(
   `/api/v1/channels/${channelId}`,
   {
     method: 'DELETE',
+    body: JSON.stringify({}),
   },
 );
