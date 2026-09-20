@@ -9,7 +9,7 @@ import {
   Title,
   Button,
 } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
+
 import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import { yupResolver } from 'mantine-form-yup-resolver';
