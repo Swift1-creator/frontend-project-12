@@ -48,12 +48,11 @@ const censorChannelName = (name) => {
   }
 
   return name
-    .replace(/boobs/gi, '***')
-    .replace(/fuck/gi, '***')
-    .replace(/shit/gi, '***')
-    .replace(/bitch/gi, '***');
+    .replace(/boobs/gi, '*****')
+    .replace(/fuck/gi, '*****')
+    .replace(/shit/gi, '*****')
+    .replace(/bitch/gi, '*****');
 };
-
 const normalizeChannels = (response) => {
   const data = normalizeResponse(response);
 
@@ -372,10 +371,6 @@ const editMutation = useMutation({
         title: 'Канал удалён',
         message: '',
         color: 'green',
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: ['channels'],
       });
     },
 
