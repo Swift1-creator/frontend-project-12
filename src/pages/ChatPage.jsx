@@ -238,45 +238,49 @@ const skipChannelRefreshTimerRef = useRef(null);
   const createMutation = useMutation({
     mutationFn: createChannel,
 
-    onSuccess: (response) => {
-      const createdChannel = normalizeChannel(response);
+onSuccess: async (response) => {
+  const createdChannel = normalizeChannel(response);
 
-      if (createdChannel?.id !== undefined) {
-        queryClient.setQueryData(
-          ['channels'],
-          (oldChannels = []) => {
-            const channelExists = oldChannels.some(
-              (channel) => (
-                String(channel.id)
-                === String(createdChannel.id)
-              ),
-            );
-
-            if (channelExists) {
-              return oldChannels.map((channel) => (
-                String(channel.id)
-                === String(createdChannel.id)
-                  ? createdChannel
-                  : channel
-              ));
-            }
-
-            return [...oldChannels, createdChannel];
-          },
+  if (createdChannel?.id !== undefined) {
+    queryClient.setQueryData(
+      ['channels'],
+      (oldChannels = []) => {
+        const channelExists = oldChannels.some(
+          (channel) => (
+            String(channel.id)
+            === String(createdChannel.id)
+          ),
         );
 
-        setCurrentChannelId(createdChannel.id);
-      }
+        if (channelExists) {
+          return oldChannels.map((channel) => (
+            String(channel.id)
+            === String(createdChannel.id)
+              ? createdChannel
+              : channel
+          ));
+        }
 
-      createForm.reset();
-      closeCreateModal();
+        return [...oldChannels, createdChannel];
+      },
+    );
 
-      notifications.show({
-        title: 'Канал создан',
-        message: 'Канал успешно создан',
-        color: 'green',
-      });
-    },
+    setCurrentChannelId(createdChannel.id);
+  }
+
+  createForm.reset();
+  closeCreateModal();
+
+  notifications.show({
+    title: 'Канал создан',
+    message: 'Канал успешно создан',
+    color: 'green',
+  });
+
+  await queryClient.invalidateQueries({
+    queryKey: ['channels'],
+  });
+},
 
     onError: (error) => {
       notifications.show({
@@ -521,15 +525,11 @@ const skipChannelRefreshTemporarily = () => {
   }, 1000);
 };
 
-  const handleCreateSubmit = createForm.onSubmit(
-    (values) => {
-      skipChannelRefreshTemporarily();
-
-      createMutation.mutate({
-        name: values.name.trim(),
-      });
-    },
-  );
+const handleCreateSubmit = createForm.onSubmit((values) => {
+  createMutation.mutate({
+    name: values.name.trim(),
+  });
+});
 
   const handleEditSubmit = editForm.onSubmit(
     (values) => {
