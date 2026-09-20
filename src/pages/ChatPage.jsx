@@ -333,54 +333,74 @@ const ChatPage = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteChannel,
+  mutationFn: deleteChannel,
 
-    onSuccess: (_data, deletedId) => {
-      const oldChannels = queryClient.getQueryData(
-        ['channels'],
-      ) ?? [];
+  onMutate: async (deletedId) => {
+    await queryClient.cancelQueries({
+      queryKey: ['channels'],
+    });
 
-      const remainingChannels = oldChannels.filter(
-        (channel) => (
-          String(channel.id)
-          !== String(deletedId)
-        ),
+    const previousChannels = queryClient.getQueryData([
+      'channels',
+    ]) ?? [];
+
+    const remainingChannels = previousChannels.filter(
+      (channel) => (
+        String(channel.id)
+        !== String(deletedId)
+      ),
+    );
+
+    queryClient.setQueryData(
+      ['channels'],
+      remainingChannels,
+    );
+
+    if (
+      String(currentChannelId)
+      === String(deletedId)
+    ) {
+      setCurrentChannelId(
+        remainingChannels[0]?.id ?? null,
       );
 
+      setMessageText('');
+    }
+
+    setChannelToDelete(null);
+    closeDeleteModal();
+
+    notifications.show({
+      title: 'Канал удалён',
+      message: 'Канал успешно удалён',
+      color: 'green',
+      autoClose: false,
+    });
+
+    return {
+      previousChannels,
+    };
+  },
+
+  onError: (error, _deletedId, context) => {
+    if (context?.previousChannels) {
       queryClient.setQueryData(
         ['channels'],
-        remainingChannels,
+        context.previousChannels,
       );
+    }
 
-      if (
-        String(currentChannelId)
-        === String(deletedId)
-      ) {
-        setCurrentChannelId(
-          remainingChannels[0]?.id ?? null,
-        );
+    notifications.show({
+      title: 'Ошибка',
+      message: error.message || 'Не удалось удалить канал',
+      color: 'red',
+    });
+  },
 
-        setMessageText('');
-      }
-
-      setChannelToDelete(null);
-      closeDeleteModal();
-
-      notifications.show({
-        title: 'Канал удалён',
-        message: 'Канал успешно удалён',
-        color: 'green',
-      });
-    },
-
-    onError: (error) => {
-      notifications.show({
-        title: 'Ошибка',
-        message: error.message || 'Не удалось удалить канал',
-        color: 'red',
-      });
-    },
-  });
+  onSettled: () => {
+    // invalidateQueries здесь не вызываем.
+  },
+});
 
   const sendMessageMutation = useMutation({
     mutationFn: sendMessage,
@@ -513,18 +533,18 @@ const ChatPage = () => {
     },
   );
 
-  const handleDelete = () => {
-    if (
-      channelToDelete?.id === undefined
-      || channelToDelete?.id === null
-    ) {
-      return;
-    }
+const handleDelete = () => {
+  const deletedId = channelToDelete?.id;
 
-    skipNextChannelRefreshRef.current = true;
+  if (
+    deletedId === undefined
+    || deletedId === null
+  ) {
+    return;
+  }
 
-    deleteMutation.mutate(channelToDelete.id);
-  };
+  deleteMutation.mutate(deletedId);
+};
 
   const handleSendMessage = (body) => {
     const trimmedBody = body.trim();
