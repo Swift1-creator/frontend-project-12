@@ -536,12 +536,11 @@ const ChatPage = () => {
 const handleDelete = () => {
   const deletedId = channelToDelete?.id;
 
-  if (
-    deletedId === undefined
-    || deletedId === null
-  ) {
+  if (deletedId === undefined || deletedId === null) {
     return;
   }
+
+  skipNextChannelRefreshRef.current = true;
 
   deleteMutation.mutate(deletedId);
 };
