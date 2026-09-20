@@ -267,11 +267,12 @@ const createMutation = useMutation({
     createForm.reset();
     closeCreateModal();
 
-    notifications.show({
-      title: 'Канал создан',
-      message: '',
-      color: 'green',
-    });
+  notifications.show({
+  title: 'Канал создан',
+  message: 'Канал успешно создан',
+  color: 'green',
+  autoClose: false,
+});
   },
 
   onError: (error) => {
@@ -316,11 +317,12 @@ const editMutation = useMutation({
   editForm.reset();
   closeEditModal();
 
-  notifications.show({
-    title: 'Канал переименован',
-    message: '',
-    color: 'green',
-  });
+notifications.show({
+  title: 'Канал переименован',
+  message: 'Название канала изменено',
+  color: 'green',
+  autoClose: false,
+});
 },
 
   onError: (error) => {
@@ -367,11 +369,12 @@ const editMutation = useMutation({
       setChannelToDelete(null);
       closeDeleteModal();
 
-      notifications.show({
-        title: 'Канал удалён',
-        message: '',
-        color: 'green',
-      });
+notifications.show({
+  title: 'Канал удалён',
+  message: 'Канал успешно удалён',
+  color: 'green',
+  autoClose: false,
+});
     },
 
     onError: (error) => {
