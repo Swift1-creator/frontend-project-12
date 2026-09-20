@@ -53,6 +53,7 @@ const censorChannelName = (name) => {
     .replace(/shit/gi, '*****')
     .replace(/bitch/gi, '*****');
 };
+
 const normalizeChannels = (response) => {
   const data = normalizeResponse(response);
 
@@ -90,11 +91,15 @@ const normalizeMessages = (response) => {
   return [];
 };
 
-const normalizeCreatedChannel = (response) => {
+const normalizeChannel = (response) => {
   const data = normalizeResponse(response);
   const channel = data?.channel ?? data?.data ?? data;
 
-  if (!channel || typeof channel !== 'object') {
+  if (
+    !channel
+    || typeof channel !== 'object'
+    || Array.isArray(channel)
+  ) {
     return null;
   }
 
@@ -108,7 +113,9 @@ const ChatPage = () => {
   const { t } = useTranslation();
   const token = getToken();
   const queryClient = useQueryClient();
+
   const socketRef = useRef(null);
+  const skipNextChannelRefreshRef = useRef(false);
 
   const [messageText, setMessageText] = useState('');
   const [isSocketConnected, setIsSocketConnected] = useState(false);
@@ -227,115 +234,105 @@ const ChatPage = () => {
     validate: yupResolver(channelSchema),
   });
 
-const createMutation = useMutation({
-  mutationFn: createChannel,
+  const createMutation = useMutation({
+    mutationFn: createChannel,
 
-  onSuccess: async (response) => {
-    const createdChannel = normalizeCreatedChannel(response);
+    onSuccess: (response) => {
+      const createdChannel = normalizeChannel(response);
 
-    if (createdChannel?.id !== undefined) {
-      queryClient.setQueryData(
-        ['channels'],
-        (oldChannels = []) => {
-          const channelExists = oldChannels.some(
-            (channel) => (
+      if (createdChannel?.id !== undefined) {
+        queryClient.setQueryData(
+          ['channels'],
+          (oldChannels = []) => {
+            const channelExists = oldChannels.some(
+              (channel) => (
+                String(channel.id)
+                === String(createdChannel.id)
+              ),
+            );
+
+            if (channelExists) {
+              return oldChannels.map((channel) => (
+                String(channel.id)
+                === String(createdChannel.id)
+                  ? createdChannel
+                  : channel
+              ));
+            }
+
+            return [...oldChannels, createdChannel];
+          },
+        );
+
+        setCurrentChannelId(createdChannel.id);
+      }
+
+      createForm.reset();
+      closeCreateModal();
+
+      notifications.show({
+        title: 'Канал создан',
+        message: 'Канал успешно создан',
+        color: 'green',
+      });
+    },
+
+    onError: (error) => {
+      notifications.show({
+        title: 'Ошибка',
+        message: error.message || 'Не удалось создать канал',
+        color: 'red',
+      });
+    },
+  });
+
+  const editMutation = useMutation({
+    mutationFn: updateChannel,
+
+    onSuccess: (response) => {
+      const updatedChannel = normalizeChannel(response);
+
+      if (updatedChannel?.id !== undefined) {
+        queryClient.setQueryData(
+          ['channels'],
+          (oldChannels = []) => (
+            oldChannels.map((channel) => (
               String(channel.id)
-              === String(createdChannel.id)
-            ),
-          );
-
-          if (channelExists) {
-            return oldChannels.map((channel) => (
-              String(channel.id)
-              === String(createdChannel.id)
-                ? createdChannel
+              === String(updatedChannel.id)
+                ? {
+                  ...channel,
+                  ...updatedChannel,
+                  name: censorChannelName(
+                    updatedChannel.name ?? channel.name,
+                  ),
+                }
                 : channel
-            ));
-          }
+            ))
+          ),
+        );
+      }
 
-          return [...oldChannels, createdChannel];
-        },
-      );
+      setEditingChannel(null);
+      editForm.reset();
+      closeEditModal();
 
-      setCurrentChannelId(createdChannel.id);
-    }
+      notifications.show({
+        title: 'Канал переименован',
+        message: 'Название канала изменено',
+        color: 'green',
+      });
+    },
 
-    await queryClient.invalidateQueries({
-      queryKey: ['channels'],
-    });
+    onError: (error) => {
+      notifications.show({
+        title: 'Ошибка',
+        message: error.message || 'Не удалось переименовать канал',
+        color: 'red',
+      });
+    },
+  });
 
-    createForm.reset();
-    closeCreateModal();
-
-  notifications.show({
-  title: 'Канал создан',
-  message: 'Канал успешно создан',
-  color: 'green',
-  autoClose: false,
-});
-  },
-
-  onError: (error) => {
-    notifications.show({
-      title: 'Ошибка',
-      message: error.message
-        || 'Не удалось создать канал',
-      color: 'red',
-    });
-  },
-});
-
-const editMutation = useMutation({
-  mutationFn: updateChannel,
-
-  onSuccess: (response) => {
-  const updatedChannel = normalizeCreatedChannel(response);
-
-  if (updatedChannel?.id !== undefined) {
-    queryClient.setQueryData(
-      ['channels'],
-      (oldChannels = []) => oldChannels.map((channel) => (
-        String(channel.id)
-        === String(updatedChannel.id)
-          ? {
-            ...channel,
-            ...updatedChannel,
-            name: censorChannelName(
-              updatedChannel.name ?? channel.name,
-            ),
-          }
-          : channel
-      )),
-    );
-  } else {
-    queryClient.invalidateQueries({
-      queryKey: ['channels'],
-    });
-  }
-
-  setEditingChannel(null);
-  editForm.reset();
-  closeEditModal();
-
-notifications.show({
-  title: 'Канал переименован',
-  message: 'Название канала изменено',
-  color: 'green',
-  autoClose: false,
-});
-},
-
-  onError: (error) => {
-    notifications.show({
-      title: 'Ошибка',
-      message: error.message
-        || 'Не удалось переименовать канал',
-      color: 'red',
-    });
-  },
-});
-
- const deleteMutation = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: deleteChannel,
 
     onSuccess: (_data, deletedId) => {
@@ -369,35 +366,27 @@ notifications.show({
       setChannelToDelete(null);
       closeDeleteModal();
 
-notifications.show({
-  title: 'Канал удалён',
-  message: 'Канал успешно удалён',
-  color: 'green',
-  autoClose: false,
-});
+      notifications.show({
+        title: 'Канал удалён',
+        message: 'Канал успешно удалён',
+        color: 'green',
+      });
     },
 
     onError: (error) => {
       notifications.show({
         title: 'Ошибка',
-        message: error.message
-          || 'Не удалось удалить канал',
+        message: error.message || 'Не удалось удалить канал',
         color: 'red',
       });
     },
   });
 
-
-
   const sendMessageMutation = useMutation({
     mutationFn: sendMessage,
 
-    onSuccess: async () => {
+    onSuccess: () => {
       setMessageText('');
-
-      await queryClient.invalidateQueries({
-        queryKey: ['messages'],
-      });
     },
 
     onError: (error) => {
@@ -422,6 +411,11 @@ notifications.show({
     socketRef.current = socket;
 
     const refreshChannels = () => {
+      if (skipNextChannelRefreshRef.current) {
+        skipNextChannelRefreshRef.current = false;
+        return;
+      }
+
       queryClient.invalidateQueries({
         queryKey: ['channels'],
       });
@@ -496,6 +490,8 @@ notifications.show({
 
   const handleCreateSubmit = createForm.onSubmit(
     (values) => {
+      skipNextChannelRefreshRef.current = true;
+
       createMutation.mutate({
         name: values.name.trim(),
       });
@@ -507,6 +503,8 @@ notifications.show({
       if (!editingChannel) {
         return;
       }
+
+      skipNextChannelRefreshRef.current = true;
 
       editMutation.mutate({
         id: editingChannel.id,
@@ -522,6 +520,8 @@ notifications.show({
     ) {
       return;
     }
+
+    skipNextChannelRefreshRef.current = true;
 
     deleteMutation.mutate(channelToDelete.id);
   };
@@ -593,15 +593,15 @@ notifications.show({
             channels={channels}
             currentChannelId={currentChannelId}
             onChangeChannel={handleChangeChannel}
-onOpenEdit={(channel) => {
-  setEditingChannel(channel);
+            onOpenEdit={(channel) => {
+              setEditingChannel(channel);
 
-  editForm.setValues({
-    name: channel.name ?? '',
-  });
+              editForm.setValues({
+                name: channel.name ?? '',
+              });
 
-  openEditModal();
-}}
+              openEditModal();
+            }}
             onOpenDelete={(channel) => {
               setChannelToDelete(channel);
               openDeleteModal();
