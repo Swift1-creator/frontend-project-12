@@ -1,7 +1,14 @@
-
 [![Hexlet Check](https://github.com/Swift1-creator/frontend-project-12/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/Swift1-creator/frontend-project-12/actions/workflows/hexlet-check.yml)
 
 # React + Vite
+
+Чат-приложение на React и Vite.
+
+## Demo
+
+[Открыть развёрнутое приложение](https://swift1-creator.github.io/frontend-project-12/)
+
+## Разработка
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
@@ -12,8 +19,8 @@ Currently, two official plugins are available:
 
 ## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The React Compiler is not enabled on this template because of its impact on build and development performance. To add it, see the [React documentation](https://react.dev/learn/react-compiler/installation).
 
 ## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+If you are developing a production application, you can use the [TypeScript template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) with type-aware lint rules enabled. See the [typescript-eslint documentation](https://typescript-eslint.io) for more information.
