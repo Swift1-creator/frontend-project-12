@@ -583,113 +583,133 @@ const handleDelete = () => {
     );
   }
 
-  return (
+ return (
+  <Box
+    style={{
+      display: 'flex',
+      width: '100%',
+      height: '100dvh',
+      minHeight: 0,
+      overflow: 'hidden',
+    }}
+  >
     <Box
+      p="md"
       style={{
-        display: 'flex',
-        minHeight: '100vh',
+        width: 280,
+        minWidth: 280,
+        minHeight: 0,
+        overflowY: 'auto',
+        borderRight: '1px solid #dee2e6',
       }}
     >
-      <Box
-        p="md"
+      <Group
+        justify="space-between"
+        wrap="nowrap"
+        mb="md"
+      >
+        <Title order={2}>
+          {t('chat.channels')}
+        </Title>
+
+        <Button
+          size="compact-sm"
+          variant="light"
+          onClick={openCreateModal}
+        >
+          + {t('chat.addChannel')}
+        </Button>
+      </Group>
+
+      {channelsQuery.isError ? (
+        <Alert color="red" role="alert">
+          Не удалось загрузить каналы
+        </Alert>
+      ) : (
+        <ChatSidebar
+          channels={channels}
+          currentChannelId={currentChannelId}
+          onChangeChannel={handleChangeChannel}
+          onOpenEdit={(channel) => {
+            setEditingChannel(channel);
+
+            editForm.setValues({
+              name: channel.name ?? '',
+            });
+
+            openEditModal();
+          }}
+          onOpenDelete={(channel) => {
+            setChannelToDelete(channel);
+            openDeleteModal();
+          }}
+          canManage
+        />
+      )}
+    </Box>
+
+    <Box
+      p="md"
+      style={{
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      <Group
+        justify="space-between"
         style={{
-          width: 280,
-          minWidth: 0,
-          borderRight: '1px solid #dee2e6',
+          flex: '0 0 auto',
         }}
       >
-        <Group
-          justify="space-between"
-          wrap="nowrap"
-          mb="md"
+        <Title order={2}>
+          {t('chat.messages')}
+        </Title>
+
+        <Text
+          size="sm"
+          c={isSocketConnected ? 'green' : 'red'}
         >
-          <Title order={2}>
-            {t('chat.channels')}
-          </Title>
+          {isSocketConnected
+            ? t('chat.connectionEstablished')
+            : t('chat.noConnection')}
+        </Text>
+      </Group>
 
-          <Button
-            size="compact-sm"
-            variant="light"
-            onClick={openCreateModal}
-          >
-            + {t('chat.addChannel')}
-          </Button>
-        </Group>
-
-        {channelsQuery.isError ? (
+      <Box
+        style={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          marginTop: 16,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+      >
+        {messagesQuery.isLoading ? (
+          <Group justify="center" p="xl">
+            <Loader />
+          </Group>
+        ) : messagesQuery.isError ? (
           <Alert color="red" role="alert">
-            Не удалось загрузить каналы
+            Не удалось загрузить сообщения
           </Alert>
         ) : (
-          <ChatSidebar
-            channels={channels}
-            currentChannelId={currentChannelId}
-            onChangeChannel={handleChangeChannel}
-            onOpenEdit={(channel) => {
-              setEditingChannel(channel);
-
-              editForm.setValues({
-                name: channel.name ?? '',
-              });
-
-              openEditModal();
-            }}
-            onOpenDelete={(channel) => {
-              setChannelToDelete(channel);
-              openDeleteModal();
-            }}
-            canManage
+          <MessageList
+            messages={currentMessages}
+            currentUser={t('chat.defaultUser')}
           />
         )}
       </Box>
 
       <Box
-        p="md"
+        mt="md"
         style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
+          flex: '0 0 auto',
         }}
       >
-        <Group justify="space-between">
-          <Title order={2}>
-            {t('chat.messages')}
-          </Title>
-
-          <Text
-            size="sm"
-            c={isSocketConnected ? 'green' : 'red'}
-          >
-            {isSocketConnected
-              ? t('chat.connectionEstablished')
-              : t('chat.noConnection')}
-          </Text>
-        </Group>
-
-        <Box
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
-          }}
-        >
-          {messagesQuery.isLoading ? (
-            <Group justify="center" p="xl">
-              <Loader />
-            </Group>
-          ) : messagesQuery.isError ? (
-            <Alert color="red" role="alert">
-              Не удалось загрузить сообщения
-            </Alert>
-          ) : (
-            <MessageList
-              messages={currentMessages}
-              currentUser={t('chat.defaultUser')}
-            />
-          )}
-        </Box>
-
         <MessageInput
           value={messageText}
           onChange={setMessageText}
@@ -699,26 +719,27 @@ const handleDelete = () => {
           aria-label="Новое сообщение"
         />
       </Box>
-
-      <ChannelModals
-        createModalOpened={createModalOpened}
-        closeCreateModal={closeCreateModal}
-        createForm={createForm}
-        handleCreateSubmit={handleCreateSubmit}
-        isCreating={createMutation.isPending}
-        editModalOpened={editModalOpened}
-        closeEditModal={closeEditModal}
-        editForm={editForm}
-        handleEditSubmit={handleEditSubmit}
-        isEditing={editMutation.isPending}
-        deleteModalOpened={deleteModalOpened}
-        closeDeleteModal={closeDeleteModal}
-        channelToDelete={channelToDelete}
-        handleDelete={handleDelete}
-        isDeleting={deleteMutation.isPending}
-      />
     </Box>
-  );
+
+    <ChannelModals
+      createModalOpened={createModalOpened}
+      closeCreateModal={closeCreateModal}
+      createForm={createForm}
+      handleCreateSubmit={handleCreateSubmit}
+      isCreating={createMutation.isPending}
+      editModalOpened={editModalOpened}
+      closeEditModal={closeEditModal}
+      editForm={editForm}
+      handleEditSubmit={handleEditSubmit}
+      isEditing={editMutation.isPending}
+      deleteModalOpened={deleteModalOpened}
+      closeDeleteModal={closeDeleteModal}
+      channelToDelete={channelToDelete}
+      handleDelete={handleDelete}
+      isDeleting={deleteMutation.isPending}
+    />
+  </Box>
+);
 };
 
 export default ChatPage;

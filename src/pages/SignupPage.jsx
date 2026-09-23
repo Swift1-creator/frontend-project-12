@@ -17,6 +17,19 @@ import * as yup from 'yup';
 import { registerUser } from '../api.js';
 import { saveToken } from '../auth.js';
 
+const getTokenFromResponse = (response) => {
+  const data = response?.data ?? response;
+
+  return (
+    data?.token
+    || data?.accessToken
+    || data?.access_token
+    || data?.user?.token
+    || data?.user?.accessToken
+    || data?.user?.access_token
+  );
+};
+
 const SignupPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -49,19 +62,14 @@ const SignupPage = () => {
       password: '',
       passwordConfirmation: '',
     },
-
     validate: yupResolver(validationSchema),
   });
 
   const signupMutation = useMutation({
     mutationFn: registerUser,
 
-    onSuccess: (data) => {
-      const token = (
-        data?.token
-        || data?.accessToken
-        || data?.access_token
-      );
+    onSuccess: (response) => {
+      const token = getTokenFromResponse(response);
 
       if (token) {
         saveToken(token);
@@ -87,20 +95,26 @@ const SignupPage = () => {
         padding: 24,
       }}
     >
-      <Title order={1} mb="xl">
+      <Title
+        order={1}
+        mb="xl"
+        fw={700}
+        c="dark"
+      >
         {t('auth.signupTitle')}
       </Title>
 
       <Box
         component="form"
         onSubmit={handleSubmit}
+        autoComplete="off"
       >
         <Stack>
           <TextInput
             id="username"
             label="Имя пользователя"
             aria-label="Имя пользователя"
-            autoComplete="username"
+            autoComplete="off"
             required
             {...form.getInputProps('username')}
           />
@@ -109,7 +123,7 @@ const SignupPage = () => {
             id="password"
             label="Пароль"
             aria-label="Пароль"
-            autoComplete="new-password"
+            autoComplete="off"
             required
             {...form.getInputProps('password')}
           />
@@ -118,7 +132,7 @@ const SignupPage = () => {
             id="passwordConfirmation"
             label="Подтвердите пароль"
             aria-label="Подтвердите пароль"
-            autoComplete="new-password"
+            autoComplete="off"
             required
             {...form.getInputProps('passwordConfirmation')}
           />
@@ -141,6 +155,7 @@ const SignupPage = () => {
             component={Link}
             to="/login"
             variant="subtle"
+            fw={600}
           >
             {t('auth.toLogin')}
           </Button>

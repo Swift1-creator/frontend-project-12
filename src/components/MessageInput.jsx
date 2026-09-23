@@ -26,6 +26,7 @@ export const MessageInput = ({
     <form onSubmit={handleSubmit}>
       <Group align="flex-end" wrap="nowrap">
         <Textarea
+          autoFocus
           value={value}
           onChange={(event) => onChange(event.currentTarget.value)}
           placeholder={placeholder}

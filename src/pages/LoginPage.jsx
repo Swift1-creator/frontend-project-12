@@ -18,7 +18,6 @@ import { loginUser } from '../api.js';
 import { saveToken } from '../auth.js';
 
 const getTokenFromResponse = (response) => {
-  // loginUser может вернуть как response.data, так и полный Axios response.
   const data = response?.data ?? response;
 
   return (
@@ -84,17 +83,21 @@ const LoginPage = () => {
         padding: 24,
       }}
     >
-      <Title order={1} mb="xl">
+      <Title order={1} mb="xl" fw={700} c="dark">
         {t('auth.loginTitle')}
       </Title>
 
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        autoComplete="off"
+      >
         <Stack>
           <TextInput
             id="username"
             label={t('auth.username')}
             aria-label={t('auth.username')}
-            autoComplete="username"
+            autoComplete="off"
             required
             {...form.getInputProps('username')}
           />
@@ -103,7 +106,7 @@ const LoginPage = () => {
             id="password"
             label={t('auth.password')}
             aria-label={t('auth.password')}
-            autoComplete="current-password"
+            autoComplete="off"
             required
             {...form.getInputProps('password')}
           />
@@ -125,6 +128,7 @@ const LoginPage = () => {
             component={Link}
             to="/signup"
             variant="subtle"
+            fw={600}
           >
             {t('auth.toSignup')}
           </Button>
